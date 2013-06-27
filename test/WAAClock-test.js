@@ -1,11 +1,89 @@
 var assert = require('assert')
   , WAAClock = require('../lib/WAAClock')
 
+// Just for testing, we don't want the clock to start
+WAAClock._start = function() {}
+
 var dummyContext = {
   currentTime: 0
 }
 
-describe('tick', function() {
+describe('setInterval', function() {
+
+  beforeEach(function() {
+    dummyContext = {
+      currentTime: 0
+    }
+  })
+
+  it('shouldn\'t change the time if repeat isn\'t already set', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event = waaClock._setTimeout(cb, 1)
+    waaClock.setInterval(event, 1.234)
+
+    assert.deepEqual(event, {time: 1, func: cb, repeat: 1.234})
+  })
+
+  it('should update the time is repeat is changed', function() {
+    dummyContext.currentTime = 0.5
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event = waaClock.setInterval(cb, 0.5)
+    delete event.func
+
+    assert.deepEqual(event, {time: 1, repeat: 0.5})
+
+    waaClock.setInterval(event, 1.2)
+    assert.deepEqual(event, {time: 1.7, repeat: 1.2})
+
+    waaClock.setInterval(event, 0.1)
+    assert.deepEqual(event, {time: 0.6, repeat: 0.1})
+  })
+
+  it('should update times of a list of events proportionally', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2, event3
+    dummyContext.currentTime = 2.4
+    event1 = waaClock.setInterval(cb, 2)
+    dummyContext.currentTime = 3.0
+    event2 = waaClock.setInterval(cb, 2)
+    dummyContext.currentTime = 3.6
+    event3 = waaClock.setInterval(cb, 2)
+    delete event1.func
+    delete event2.func
+    delete event3.func
+
+    assert.deepEqual(event1, {time: 4.4, repeat: 2})
+    assert.deepEqual(event2, {time: 5.0, repeat: 2})
+    assert.deepEqual(event3, {time: 5.6, repeat: 2})
+
+    dummyContext.currentTime = 4.0
+    waaClock.setInterval([event1, event2, event3], 0.5)
+    assert.deepEqual(event1, {time: 4.1, repeat: 0.5})
+    assert.deepEqual(event2, {time: 4.1 + (0.6 / 4), repeat: 0.5})
+    assert.deepEqual(event3, {time: 4.1 + (1.2 / 4), repeat: 0.5})
+  })
+
+  it('should work even if there wasn\'t a repeat before', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2
+    event1 = waaClock._setTimeout(cb, 2)
+    dummyContext.currentTime = 1.5
+    event2 = waaClock._setTimeout(cb, 2)
+
+    assert.deepEqual(event1, {time: 2, func: cb})
+    assert.deepEqual(event2, {time: 3.5, func: cb})
+    waaClock.setInterval([event1, event2], 2)
+    assert.deepEqual(event1, {time: 2, repeat: 2, func: cb})
+    assert.deepEqual(event2, {time: 3.5, repeat: 2, func: cb})
+  })
+
+})
+
+describe('_tick', function() {
 
   beforeEach(function() {
     dummyContext = {
@@ -16,39 +94,39 @@ describe('tick', function() {
   it('should execute simple events rightly', function() {
     var called = []
       , waaClock = new WAAClock(dummyContext)
-      , event1 = waaClock.setTimeout(function() { called.push(1) }, 7.5)
-      , event2 = waaClock.setTimeout(function() { called.push(2) }, 3.51)
-      , event3 = waaClock.setTimeout(function() { called.push(3) }, 2.55)
+      , event1 = waaClock._setTimeout(function() { called.push(1) }, 7.5)
+      , event2 = waaClock._setTimeout(function() { called.push(2) }, 3.51)
+      , event3 = waaClock._setTimeout(function() { called.push(3) }, 2.55)
     waaClock.lookAheadTime = 2.5
     waaClock.tickTime = 1
     
     // t=0 / look ahead=2.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=1 / look ahead=3.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [3])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=2 / look ahead=4.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [3, 2])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=3 / look ahead=5.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [3, 2])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=4 / look ahead=6.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [3, 2])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=5 / look ahead=7.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [3, 2, 1])
     assert.deepEqual(waaClock._events, [])
   })
@@ -56,36 +134,37 @@ describe('tick', function() {
   it('should execute repeated events', function() {
     var called = []
       , waaClock = new WAAClock(dummyContext)
-      , event1 = waaClock.setTimeout(function() { called.push(1) }, 3)
-      , event2 = waaClock.setInterval(function() { called.push(2) }, 1.2)
+      , event1 = waaClock._setTimeout(function() { called.push(1) }, 3)
+      , event2 = waaClock._setTimeout(function() { called.push(2) }, 1.2)
+    waaClock.setInterval(event2, 1.2)
     waaClock.lookAheadTime = 2.5
     waaClock.tickTime = 1
     
     // t=0 / look ahead=2.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [2, 2])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=1 / look ahead=3.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [2, 2, 1])
     dummyContext.currentTime += waaClock.tickTime
 
     // t=2 / look ahead=4.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [2, 2, 1, 2])
     dummyContext.currentTime += waaClock.tickTime
 
     waaClock.clear(event2)
     // t=3 / look ahead=5.5
-    waaClock.tick()
+    waaClock._tick()
     assert.deepEqual(called, [2, 2, 1, 2])
     dummyContext.currentTime += waaClock.tickTime
   })
 
 })
 
-describe('setTimeout', function() {
+describe('_setTimeout', function() {
 
   beforeEach(function() {
     dummyContext = {
@@ -98,10 +177,10 @@ describe('setTimeout', function() {
       , cb1 = function() {}
       , cb2 = function() {}
       , cb3 = function() {}
-    waaClock.setTimeout(cb1, 1000)
-    waaClock.setTimeout(cb2, 300)
+    waaClock._setTimeout(cb1, 1000)
+    waaClock._setTimeout(cb2, 300)
     dummyContext.currentTime = 200
-    waaClock.setTimeout(cb3, 200.5)
+    waaClock._setTimeout(cb3, 200.5)
     assert.deepEqual(waaClock._events, [
       {time: 300, func: cb2},
       {time: 400.5, func: cb3},
@@ -111,41 +190,7 @@ describe('setTimeout', function() {
 
   it('should remove event when calling clear', function() {
     var waaClock = new WAAClock(dummyContext)
-      , event = waaClock.setTimeout(function() {}, 1000)
-    assert.deepEqual(waaClock._events, [event])
-    waaClock.clear(event)
-    assert.deepEqual(waaClock._events, [])
-  })
-
-})
-
-describe('setInterval', function() {
-
-  beforeEach(function() {
-    dummyContext = {
-      currentTime: 0
-    }
-  })
-
-  it('should create an event when called', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , cb1 = function() {}
-      , cb2 = function() {}
-      , cb3 = function() {}
-    waaClock.setInterval(cb1, 1000)
-    waaClock.setInterval(cb2, 300)
-    dummyContext.currentTime = 200
-    waaClock.setInterval(cb3, 200.5)
-    assert.deepEqual(waaClock._events, [
-      {time: 300, func: cb2, repeat: 300},
-      {time: 400.5, func: cb3, repeat: 200.5},
-      {time: 1000, func: cb1, repeat: 1000}
-    ])
-  })
-
-  it('should remove event when calling clear', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , event = waaClock.setInterval(function() {}, 1000)
+      , event = waaClock._setTimeout(function() {}, 1000)
     assert.deepEqual(waaClock._events, [event])
     waaClock.clear(event)
     assert.deepEqual(waaClock._events, [])
