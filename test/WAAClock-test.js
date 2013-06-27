@@ -53,6 +53,36 @@ describe('tick', function() {
     assert.deepEqual(waaClock._events, [])
   })
 
+  it('should execute repeated events', function() {
+    var called = []
+      , waaClock = new WAAClock(dummyContext)
+      , event1 = waaClock.setTimeout(function() { called.push(1) }, 3)
+      , event2 = waaClock.setInterval(function() { called.push(2) }, 1.2)
+    waaClock.lookAheadTime = 2.5
+    waaClock.tickTime = 1
+    
+    // t=0 / look ahead=2.5
+    waaClock.tick()
+    assert.deepEqual(called, [2, 2])
+    dummyContext.currentTime += waaClock.tickTime
+
+    // t=1 / look ahead=3.5
+    waaClock.tick()
+    assert.deepEqual(called, [2, 2, 1])
+    dummyContext.currentTime += waaClock.tickTime
+
+    // t=2 / look ahead=4.5
+    waaClock.tick()
+    assert.deepEqual(called, [2, 2, 1, 2])
+    dummyContext.currentTime += waaClock.tickTime
+
+    waaClock.clear(event2)
+    // t=3 / look ahead=5.5
+    waaClock.tick()
+    assert.deepEqual(called, [2, 2, 1, 2])
+    dummyContext.currentTime += waaClock.tickTime
+  })
+
 })
 
 describe('setTimeout', function() {
