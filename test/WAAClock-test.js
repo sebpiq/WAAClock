@@ -8,6 +8,64 @@ var dummyContext = {
   currentTime: 0
 }
 
+describe('timeStretch', function() {
+
+  beforeEach(function() {
+    dummyContext = {
+      currentTime: 0
+    }
+  })
+
+  it('should stretch rightly events with the same interval', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2, event3, ratio
+    dummyContext.currentTime = 2.4
+    event1 = waaClock.setInterval(cb, 2)
+    dummyContext.currentTime = 3.0
+    event2 = waaClock.setInterval(cb, 2)
+    dummyContext.currentTime = 3.6
+    event3 = waaClock.setInterval(cb, 2)
+    delete event1.func
+    delete event2.func
+    delete event3.func
+
+    assert.deepEqual(event1, {time: 4.4, repeat: 2})
+    assert.deepEqual(event2, {time: 5.0, repeat: 2})
+    assert.deepEqual(event3, {time: 5.6, repeat: 2})
+
+    dummyContext.currentTime = 4.0
+    ratio = 1/4
+    waaClock.timeStretch([event1, event2, event3], ratio)
+    assert.deepEqual(event1, {time: 4.1, repeat: 0.5})
+    assert.deepEqual(event2, {time: 4.1 + (0.6 * ratio), repeat: 0.5})
+    assert.deepEqual(event3, {time: 4.1 + (1.2 * ratio), repeat: 0.5})
+  })
+
+  it('should stretch rightly events with different intervals', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2, event3, ratio
+    event1 = waaClock.setInterval(cb, 2)
+    event2 = waaClock.setInterval(cb, 3)
+    event3 = waaClock.setInterval(cb, 4)
+    delete event1.func
+    delete event2.func
+    delete event3.func
+
+    assert.deepEqual(event1, {time: 2, repeat: 2})
+    assert.deepEqual(event2, {time: 3, repeat: 3})
+    assert.deepEqual(event3, {time: 4, repeat: 4})
+
+    ratio = 1/2
+    waaClock.timeStretch([event1, event2, event3], ratio)
+    assert.deepEqual(event1, {time: 1, repeat: 1})
+    assert.deepEqual(event2, {time: 1.5, repeat: 1.5})
+    assert.deepEqual(event3, {time: 2, repeat: 2})
+  })
+
+})
+
 describe('setInterval', function() {
 
   beforeEach(function() {
@@ -39,46 +97,6 @@ describe('setInterval', function() {
 
     waaClock.setInterval(event, 0.1)
     assert.deepEqual(event, {time: 0.6, repeat: 0.1})
-  })
-
-  it('should update times of a list of events proportionally', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , cb = function() {}
-      , event1, event2, event3
-    dummyContext.currentTime = 2.4
-    event1 = waaClock.setInterval(cb, 2)
-    dummyContext.currentTime = 3.0
-    event2 = waaClock.setInterval(cb, 2)
-    dummyContext.currentTime = 3.6
-    event3 = waaClock.setInterval(cb, 2)
-    delete event1.func
-    delete event2.func
-    delete event3.func
-
-    assert.deepEqual(event1, {time: 4.4, repeat: 2})
-    assert.deepEqual(event2, {time: 5.0, repeat: 2})
-    assert.deepEqual(event3, {time: 5.6, repeat: 2})
-
-    dummyContext.currentTime = 4.0
-    waaClock.setInterval([event1, event2, event3], 0.5)
-    assert.deepEqual(event1, {time: 4.1, repeat: 0.5})
-    assert.deepEqual(event2, {time: 4.1 + (0.6 / 4), repeat: 0.5})
-    assert.deepEqual(event3, {time: 4.1 + (1.2 / 4), repeat: 0.5})
-  })
-
-  it('should work even if there wasn\'t a repeat before', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , cb = function() {}
-      , event1, event2
-    event1 = waaClock._setTimeout(cb, 2)
-    dummyContext.currentTime = 1.5
-    event2 = waaClock._setTimeout(cb, 2)
-
-    assert.deepEqual(event1, {time: 2, func: cb})
-    assert.deepEqual(event2, {time: 3.5, func: cb})
-    waaClock.setInterval([event1, event2], 2)
-    assert.deepEqual(event1, {time: 2, repeat: 2, func: cb})
-    assert.deepEqual(event2, {time: 3.5, repeat: 2, func: cb})
   })
 
 })
