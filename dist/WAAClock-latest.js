@@ -6,42 +6,108 @@ window.WAAClock = WAAClock
 },{"./lib/WAAClock":2}],2:[function(require,module,exports){
 var _ = require('underscore')
 
-var WAAClock = module.exports = function(context) {
-  this.context = context
-  this._events = []
+var Event = function(clock, time, func, repeat) {
+  this.clock = clock
+  this.time = time
+  this.func = func
+  this.repeat = repeat
+}
 
+_.extend(Event.prototype, {
+  
+  clear: function() { this.clock.clear(this) },
+
+  isRepeated: function() { return this.repeat !== undefined }
+
+})
+
+var AudioParamMixin = {
+
+  scheduleSetValue: function(relTime, value) {
+    var self = this
+      , event = this._waac._setTimeout(function() {
+        self.setValueAtTime(value, event.time)
+      }, relTime)
+    return event
+  },
+
+  repeatSetValue: function(delay, value) {
+    var self = this
+      , event = this._waac.setInterval(function() {
+        self.setValueAtTime(value, event.time)
+      }, delay)
+    return event
+  },
+
+  _waac: null
+
+}
+
+var AudioContextMixin = {
+
+  createOscillator: function() {
+    var osc = webkitAudioContext.prototype.createOscillator.apply(this, arguments)
+    return initAudioNode(osc, this._waac)
+  },
+
+  _waac: null
+
+}
+
+var initAudioNode = function(node, clock) {
+
+  // Mixing-in AudioParams
+  var audioParams = _.filter(_.values(node), function(val) {
+    return _.isFunction(val.setValueAtTime)
+  })
+  audioParams.forEach(function(audioParam) {
+    _.extend(audioParam, AudioParamMixin, {_waac: clock})
+  })
+
+  // Saving a reference to the methods we will override
+  node._waac_start = node.start
+  node._waac_stop = node.stop
+
+  _.extend(node, AudioNodeMixin, {_waac: clock})
+  return node
+}
+
+var AudioNodeMixin = {
+
+  start: function(time) {
+    var self = this
+      , args = _.toArray(arguments).slice(1)
+      , event = this._waac._setTimeout(function() {
+        self._waac_start.apply(self, [event.time].concat(args))
+      }, this._waac._relTime(time))
+    return event
+  },
+
+  stop: function(time) {
+    var args = _.toArray(arguments).slice(1)
+      , event = this._waac._setTimeout(function() {
+        self._waac_stop.apply(self, [event.time].concat(args))
+      }, this._waac._relTime(time))
+    return event
+  },
+
+  _waac: null
+
+}
+
+var WAAClock = module.exports = function(context) {
+  var self = this
+  this.context = context
+  _.extend(context, AudioContextMixin, {_waac: this})
+  this._events = []
   this.tickTime = 0.010
   this.lookAheadTime = 0.020
-
   this._start()
 }
 
 _.extend(WAAClock.prototype, {
 
   // ==================== Public API ==================== //
-  setValueAtTime: function(obj, time, value) {
-    var event = this._setTimeout(function() {
-      obj.setValueAtTime(value, event.time)
-    }, this._relTime(time))
-    return event
-  },
-
-  start: function(obj, time) {
-    var args = _.toArray(arguments).slice(2)
-      , event = this._setTimeout(function() {
-        obj.start.apply(obj, [event.time].concat(args))
-      }, this._relTime(time))
-    return event
-  },
-
-  stop: function(obj, time) {
-    var args = _.toArray(arguments).slice(2)
-      , event = this._setTimeout(function() {
-        obj.stop.apply(obj, [event.time].concat(args))
-      }, this._relTime(time))
-    return event
-  },
-
   setTimeout: function(func, delay) {
     var self = this
       , event = this._setTimeout(function() {
@@ -56,7 +122,7 @@ _.extend(WAAClock.prototype, {
     var self = this
       , event
       , setRepeat = function(event, repeat) {
-        if (event.hasOwnProperty('repeat')) {
+        if (event.isRepeated()) {
           event.time = event.time - event.repeat + repeat
           event.repeat = repeat
           while (event.time < this.context.currentTime)
@@ -82,7 +148,7 @@ _.extend(WAAClock.prototype, {
   // In fact this is equivalent to changing the tempo.
   timeStretch: function(events, ratio) {
     var eventRef = _.min(events, function(e) { return e.time })
-    if (eventRef.hasOwnProperty('repeat')) {
+    if (eventRef.isRepeated()) {
       var tRef1 = eventRef.time
         , tRef2 = this._absTime(ratio * this._relTime(eventRef.time))
       events.forEach(function(event) {
@@ -100,7 +166,7 @@ _.extend(WAAClock.prototype, {
   // ==================== Private ==================== //
   _setTimeout: function(func, delay) {
     var timeThen = this._absTime(delay)
-      , event = {time: timeThen, func: func}
+      , event = new Event(this, timeThen, func)
     this._insertEvent(event)
     return event
   },
@@ -123,7 +189,7 @@ _.extend(WAAClock.prototype, {
     // Execute the events
     while(event && event.time <= timeLookedAhead) {
       event.func()
-      if (event.hasOwnProperty('repeat')) {
+      if (event.isRepeated()) {
         event.time = event.time + event.repeat
         this._insertEvent(event)
       }
@@ -148,19 +214,16 @@ _.extend(WAAClock.prototype, {
     return _.sortedIndex(this._events, {time: time}, function(e) { return e.time })
   },
 
-  _absTime: function(time) {
-    return time + this.context.currentTime
+  // Returns the time, taking for origin `context`'s origin
+  _absTime: function(relTime) {
+    return relTime + this.context.currentTime
   },
 
-  _relTime: function(time) {
-    return time - this.context.currentTime
+  // Returns the time, taking `currentTime` as origin. 
+  _relTime: function(absTime) {
+    return absTime - this.context.currentTime
   }
 })
-
-/*['linearRampToValueAtTime',
-'exponentialRampToValueAtTime', 'setTargetAtTime', 'setValueCurveAtTime']
-
-*/
 
 },{"underscore":3}],3:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
