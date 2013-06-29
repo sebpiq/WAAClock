@@ -36,11 +36,11 @@ describe('timeStretch', function() {
       , event1, event2, event3, ratio
     dummyContext.currentTime = 2.4
 
-    event1 = waaClock.setInterval(cb, 2)
+    event1 = waaClock.setTimeout(cb, 2).setRepeat(2)
     dummyContext.currentTime = 3.0
-    event2 = waaClock.setInterval(cb, 2)
+    event2 = waaClock.setTimeout(cb, 2).setRepeat(2)
     dummyContext.currentTime = 3.6
-    event3 = waaClock.setInterval(cb, 2)
+    event3 = waaClock.setTimeout(cb, 2).setRepeat(2)
 
     assert.deepEqual(eToObj1(event1), {time: 4.4, repeat: 2})
     assert.deepEqual(eToObj1(event2), {time: 5.0, repeat: 2})
@@ -58,9 +58,9 @@ describe('timeStretch', function() {
     var waaClock = new WAAClock(dummyContext)
       , cb = function() {}
       , event1, event2, event3, ratio
-    event1 = waaClock.setInterval(cb, 2)
-    event2 = waaClock.setInterval(cb, 3)
-    event3 = waaClock.setInterval(cb, 4)
+    event1 = waaClock.setTimeout(cb, 2).setRepeat(2)
+    event2 = waaClock.setTimeout(cb, 3).setRepeat(3)
+    event3 = waaClock.setTimeout(cb, 4).setRepeat(4)
 
     assert.deepEqual(eToObj1(event1), {time: 2, repeat: 2})
     assert.deepEqual(eToObj1(event2), {time: 3, repeat: 3})
@@ -73,6 +73,25 @@ describe('timeStretch', function() {
     assert.deepEqual(eToObj1(event3), {time: 2, repeat: 2})
   })
 
+  it('should stretch rightly with events that do not repeat', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2, event3, ratio
+    event1 = waaClock.setTimeout(cb, 1.76)
+    event2 = waaClock.setTimeout(cb, 3.1).setRepeat(1)
+    event3 = waaClock.setTimeout(cb, 3.8)
+
+    assert.deepEqual(eToObj1(event1), {time: 1.76, repeat: undefined})
+    assert.deepEqual(eToObj1(event2), {time: 3.1, repeat: 1})
+    assert.deepEqual(eToObj1(event3), {time: 3.8, repeat: undefined})
+
+    ratio = 1/2
+    waaClock.timeStretch([event1, event2, event3], ratio)
+    assert.deepEqual(eToObj1(event1), {time: 1.76/2, repeat: undefined})
+    assert.deepEqual(eToObj1(event2), {time: 3.10/2, repeat: 0.5})
+    assert.deepEqual(eToObj1(event3), {time: 3.8/2, repeat: undefined})
+  })
+
 })
 
 describe('setRepeat', function() {
@@ -83,26 +102,12 @@ describe('setRepeat', function() {
     }
   })
 
-  it('shouldn\'t change the time if repeat isn\'t already set', function() {
+  it('shouldn\'t set event\'s repeat', function() {
     var waaClock = new WAAClock(dummyContext)
       , event = waaClock._createEvent(function() {}, 1)
     waaClock.setRepeat(event, 1.234)
 
     assert.deepEqual(eToObj1(event), {time: 1, repeat: 1.234})
-  })
-
-  it('should update the time is repeat is changed', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , event = waaClock._createEvent(function() {}, 1)
-
-    waaClock.setRepeat(event, 0.5)
-    assert.deepEqual(eToObj1(event), {time: 1, repeat: 0.5})
-
-    waaClock.setRepeat(event, 1.2)
-    assert.deepEqual(eToObj1(event), {time: 1.7, repeat: 1.2})
-
-    waaClock.setRepeat(event, 0.1)
-    assert.deepEqual(eToObj1(event), {time: 0.6, repeat: 0.1})
   })
 
 })
