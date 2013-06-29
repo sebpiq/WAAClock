@@ -107,6 +107,34 @@ describe('setRepeat', function() {
 
 })
 
+describe('setTime', function() {
+
+  beforeEach(function() {
+    dummyContext = {
+      currentTime: 0
+    }
+  })
+
+  it('should set time and update the list of events', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , event1 = waaClock._createEvent(function() {}, 1)
+      , event2 = waaClock._createEvent(function() {}, 0.5)
+      , event3 = waaClock._createEvent(function() {}, 2)
+
+    assert.deepEqual(waaClock._events.map(eToObj1),
+      [ {time: 0.5, repeat: undefined}, {time: 1, repeat: undefined}, {time: 2, repeat: undefined} ])
+
+    waaClock.setTime(event2, 1.234)
+    assert.deepEqual(waaClock._events.map(eToObj1),
+      [ {time: 1, repeat: undefined}, {time: 1.234, repeat: undefined}, {time: 2, repeat: undefined} ])
+
+    waaClock.setTime(event3, 0.2)
+    assert.deepEqual(waaClock._events.map(eToObj1),
+      [ {time: 0.2, repeat: undefined}, {time: 1, repeat: undefined}, {time: 1.234, repeat: undefined} ])
+  })
+
+})
+
 describe('_tick', function() {
 
   beforeEach(function() {
@@ -221,7 +249,7 @@ describe('_createEvent', function() {
 
 })
 
-describe('events management', function() {
+describe('_insertEvent', function() {
 
   it('should insert events at the right position', function() {
     var waaClock = new WAAClock(dummyContext)
@@ -243,6 +271,10 @@ describe('events management', function() {
     assert.deepEqual(waaClock._events, [{time: 1}, {time: 2, bla: 34}, {time: 2},
       {time: 3}, {time: 7}, {time: 9}, {time: 11}, {time: 13}])
   })
+
+})
+
+describe('_removeEvent', function() {
 
   it('should remove events rightly', function() {
     var waaClock = new WAAClock(dummyContext)
@@ -275,7 +307,7 @@ describe('_indexByTime', function() {
 
 })
 
-describe('time referential', function() {
+describe('_refTime, _absTime', function() {
 
   beforeEach(function() {
     dummyContext = {

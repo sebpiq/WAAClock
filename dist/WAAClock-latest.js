@@ -6,6 +6,7 @@ window.WAAClock = WAAClock
 },{"./lib/WAAClock":2}],2:[function(require,module,exports){
 var _ = require('underscore')
 
+// ==================== Event ==================== //
 var Event = function(clock, time, func, repeat) {
   this.clock = clock
   this.time = time
@@ -15,27 +16,159 @@ var Event = function(clock, time, func, repeat) {
 
 _.extend(Event.prototype, {
   
-  clear: function() { this.clock.clear(this) },
+  clear: function() {
+    this.clock.clear(this)
+    return this
+  },
+
+  setRepeat: function(repeat) {
+    this.clock.setRepeat(this, repeat)
+    return this
+  },
 
   isRepeated: function() { return this.repeat !== undefined }
 
 })
 
-var AudioParamMixin = {
+// ==================== WAAClock ==================== //
+var WAAClock = module.exports = function(context) {
+  var self = this
+  this.context = context
+  _.extend(context, AudioContextMixin, {_waac: this})
+  this._events = []
+  this.tickTime = 0.010
+  this.lookAheadTime = 0.020
+  this._start()
+}
 
-  scheduleSetValue: function(relTime, value) {
+_.extend(WAAClock.prototype, {
+
+  // ---------- Public API ---------- //
+  // Schedule `func` to run after `delay` seconds.
+  setTimeout: function(func, delay) {
     var self = this
-      , event = this._waac._setTimeout(function() {
-        self.setValueAtTime(value, event.time)
-      }, relTime)
+      , event = this._createEvent(function() {
+        setTimeout(func, self._relTime(event.time))
+      }, this._absTime(delay))
     return event
   },
 
-  repeatSetValue: function(delay, value) {
+  // Schedule `func` to run periodically, at interval of `delay` seconds.
+  setInterval: function(func, delay) {
+    var event = this.setTimeout(func, delay)
+    return this.setRepeat(event, delay)
+  },
+
+  // Stretch time and interval of `events` by `ratio`, keeping their relative time distance.
+  // In fact this is equivalent to changing the tempo.
+  timeStretch: function(events, ratio) {
     var self = this
-      , event = this._waac.setInterval(function() {
+      , eventRef = _.min(events, function(e) { return e.time })
+    if (eventRef.isRepeated()) {
+      var tRef1 = eventRef.time
+        , tRef2 = this._absTime(ratio * this._relTime(eventRef.time))
+      events.forEach(function(event) {
+        self.setTime(event, tRef2 + ratio * (event.time - tRef1))
+        if(event.repeat) event.repeat *= ratio
+      })
+    }
+    return events
+  },
+
+  // Unschedule `event`
+  clear: function(event) {
+    this._removeEvent(event)
+  },
+
+  // Set the interval at which `event` repeats. `repeat` is in seconds.
+  setRepeat: function(event, repeat) {
+    if (repeat === 0)
+      throw new Error('delay cannot be 0')
+    if (event.isRepeated()) {
+      var newTime = event.time - event.repeat + repeat
+      event.repeat = repeat
+      while (newTime < this.context.currentTime)
+        newTime += event.repeat
+      this.setTime(event, newTime)
+    } else event.repeat = repeat
+    return event
+  },
+
+  setTime: function(event, time) {
+    if (time < this.context.currentTime)
+      throw new Error('cannot schedule an event in the past')
+    this._removeEvent(event)
+    event.time = time
+    this._insertEvent(event)
+  },
+
+  // ---------- Private ---------- //
+  _start: function() {
+    if (this.intervalId === undefined) { 
+      var self = this
+      this.intervalId = setInterval(function() {
+        self._tick()
+      }, this.tickTime)
+      self._tick()
+    }
+  },
+
+  // TODO : drop events that were missed?
+  _tick: function() {
+    var timeLookedAhead = this._absTime(this.lookAheadTime)
+      , event = this._events.shift()
+
+    // Execute the events
+    while(event && event.time <= timeLookedAhead) {
+      event.func()
+      if (event.isRepeated())
+        this.setTime(event, event.time + event.repeat)
+      event = this._events.shift()
+    }
+
+    // Put back the last event
+    if(event) this._events.unshift(event)
+  },
+
+  _createEvent: function(func, absTime) {
+    var event = new Event(this, absTime, func)
+    this._insertEvent(event)
+    return event
+  },
+
+  _insertEvent: function(event) {
+    this._events.splice(this._indexByTime(event.time), 0, event)
+  },
+
+  _removeEvent: function(event) {
+    var ind = this._events.indexOf(event)
+    if (ind !== -1) this._events.splice(ind, 1)
+  },
+
+  // Returns the index of the first event whose time is >= to `time`
+  _indexByTime: function(time) {
+    return _.sortedIndex(this._events, {time: time}, function(e) { return e.time })
+  },
+
+  // Returns the time, taking for origin `context`'s origin
+  _absTime: function(relTime) {
+    return relTime + this.context.currentTime
+  },
+
+  // Returns the time, taking `currentTime` as origin. 
+  _relTime: function(absTime) {
+    return absTime - this.context.currentTime
+  }
+})
+
+// ==================== Web Audio API patches ==================== //
+var AudioParamMixin = {
+
+  scheduleSetValue: function(time, value) {
+    var self = this
+      , event = this._waac._createEvent(function() {
         self.setValueAtTime(value, event.time)
-      }, delay)
+      }, time)
     return event
   },
 
@@ -77,153 +210,23 @@ var AudioNodeMixin = {
   start: function(time) {
     var self = this
       , args = _.toArray(arguments).slice(1)
-      , event = this._waac._setTimeout(function() {
+      , event = this._waac._createEvent(function() {
         self._waac_start.apply(self, [event.time].concat(args))
-      }, this._waac._relTime(time))
+      }, time)
     return event
   },
 
   stop: function(time) {
     var args = _.toArray(arguments).slice(1)
-      , event = this._waac._setTimeout(function() {
+      , event = this._waac._createEvent(function() {
         self._waac_stop.apply(self, [event.time].concat(args))
-      }, this._waac._relTime(time))
+      }, time)
     return event
   },
 
   _waac: null
 
 }
-
-var WAAClock = module.exports = function(context) {
-  var self = this
-  this.context = context
-  _.extend(context, AudioContextMixin, {_waac: this})
-  this._events = []
-  this.tickTime = 0.010
-  this.lookAheadTime = 0.020
-  this._start()
-}
-
-_.extend(WAAClock.prototype, {
-
-  // ==================== Public API ==================== //
-  setTimeout: function(func, delay) {
-    var self = this
-      , event = this._setTimeout(function() {
-        setTimeout(func, self._relTime(event.time))
-      })
-    return event
-  },
-
-  // `func` can be a function to execute periodically, an event
-  // in order to change its periodicity.
-  setInterval: function(obj, delay) {
-    var self = this
-      , event
-      , setRepeat = function(event, repeat) {
-        if (event.isRepeated()) {
-          event.time = event.time - event.repeat + repeat
-          event.repeat = repeat
-          while (event.time < this.context.currentTime)
-            event.time += event.repeat
-        } else event.repeat = repeat
-        return event
-      }
-    if (delay === 0) throw new Error('delay cannot be 0')
-    
-    // If `obj` is a function, we create a new event
-    if (_.isFunction(obj)) {
-      var self = this
-      event = this._setTimeout(function() {
-        setTimeout(obj, this._relTime(this.event.time))
-      }, delay)
-      return setRepeat(event, delay)
-
-    // Otherwise, if `obj` is an event we just set the delay
-    } else return setRepeat(obj, delay)
-  },
-
-  // Stretch time and interval of `events` by `ratio`, keeping their relative time distance.
-  // In fact this is equivalent to changing the tempo.
-  timeStretch: function(events, ratio) {
-    var eventRef = _.min(events, function(e) { return e.time })
-    if (eventRef.isRepeated()) {
-      var tRef1 = eventRef.time
-        , tRef2 = this._absTime(ratio * this._relTime(eventRef.time))
-      events.forEach(function(event) {
-        event.time = tRef2 + ratio * (event.time - tRef1)
-        if(event.repeat) event.repeat *= ratio
-      })
-    }
-    return events
-  },
-
-  clear: function(event) {
-    this._removeEvent(event)
-  },
-
-  // ==================== Private ==================== //
-  _setTimeout: function(func, delay) {
-    var timeThen = this._absTime(delay)
-      , event = new Event(this, timeThen, func)
-    this._insertEvent(event)
-    return event
-  },
-
-  _start: function() {
-    if (this.intervalId === undefined) { 
-      var self = this
-      this.intervalId = setInterval(function() {
-        self._tick()
-      }, this.tickTime)
-      self._tick()
-    }
-  },
-
-  // TODO : drop events that were missed?
-  _tick: function() {
-    var timeLookedAhead = this._absTime(this.lookAheadTime)
-      , event = this._events.shift()
-
-    // Execute the events
-    while(event && event.time <= timeLookedAhead) {
-      event.func()
-      if (event.isRepeated()) {
-        event.time = event.time + event.repeat
-        this._insertEvent(event)
-      }
-      event = this._events.shift()
-    }
-
-    // Put back the last event
-    if(event) this._events.unshift(event)
-  },
-
-  _insertEvent: function(event) {
-    this._events.splice(this._indexByTime(event.time), 0, event)
-  },
-
-  _removeEvent: function(event) {
-    var ind = this._events.indexOf(event)
-    if (ind !== -1) this._events.splice(ind, 1)
-  },
-
-  // Returns the index of the first event whose time is >= to `time`
-  _indexByTime: function(time) {
-    return _.sortedIndex(this._events, {time: time}, function(e) { return e.time })
-  },
-
-  // Returns the time, taking for origin `context`'s origin
-  _absTime: function(relTime) {
-    return relTime + this.context.currentTime
-  },
-
-  // Returns the time, taking `currentTime` as origin. 
-  _relTime: function(absTime) {
-    return absTime - this.context.currentTime
-  }
-})
 
 },{"underscore":3}],3:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
