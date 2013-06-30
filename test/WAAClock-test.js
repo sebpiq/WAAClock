@@ -22,6 +22,24 @@ var dummyContext = {
   currentTime: 0
 }
 
+describe('Event', function() {
+
+  it('should be an EventEmitter', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , event = waaClock._createEvent(function(){}, 5)
+      , called = []
+      , cb = function() { called.push('bla') }
+    event.on('bla', cb)
+    assert.deepEqual(called, [])
+    event.emit('bla')
+    assert.deepEqual(called, ['bla'])
+    event.removeListener('bla', cb)
+    event.emit('bla')
+    assert.deepEqual(called, ['bla'])
+  })
+
+})
+
 describe('timeStretch', function() {
 
   beforeEach(function() {
@@ -217,6 +235,27 @@ describe('_tick', function() {
     waaClock._tick()
     assert.deepEqual(called, [2, 2, 1, 2])
     dummyContext.currentTime += waaClock.tickTime
+  })
+
+  it('should emit \'executed\'', function() {
+    var called = []
+      , waaClock = new WAAClock(dummyContext)
+      , event1 = waaClock._createEvent(function() {}, 3)
+      , event2 = waaClock._createEvent(function() {}, 1.2)
+    event1.on('executed', function() { called.push('1-ok') })
+    event2.on('executed', function() { called.push('2-ok') })
+    waaClock.lookAheadTime = 2.5
+    waaClock.tickTime = 1
+
+    // t=0 / look ahead=2.5
+    waaClock._tick()
+    assert.deepEqual(called, ['2-ok'])
+    dummyContext.currentTime += waaClock.tickTime
+
+    // t=1 / look ahead=3.5
+    waaClock._tick()
+    assert.deepEqual(called, ['2-ok', '1-ok'])
+    
   })
 
 })
