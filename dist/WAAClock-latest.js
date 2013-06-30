@@ -609,11 +609,12 @@ if (typeof AudioContext === 'undefined') {
 }
 
 // ==================== Event ==================== //
-var Event = function(clock, time, func, repeat) {
+var Event = function(clock, time, func) {
   this.clock = clock
   this.time = time
   this.func = func
-  this.repeat = repeat
+  this.repeatTime = null
+  this.toleranceTime = 0.010
 }
 inherits(Event, EventEmitter)
 
@@ -621,31 +622,38 @@ _.extend(Event.prototype, {
   
   // Unschedules the event
   clear: function() {
-    this.clock.clear(this)
+    this.clock._clear(this)
     return this
   },
 
-  // Sets the event to repeat. `repeat` is in seconds.
-  setRepeat: function(repeat) {
-    this.clock.setRepeat(this, repeat)
+  // Sets the event to repeat every `time` seconds.
+  repeat: function(time) {
+    this.clock._setRepeat(this, time)
+    return this
+  },
+
+  // Sets the tolerance of the event. If the event is executed more than 
+  // `time` seconds behind the expected date, it will be dropped.
+  tolerance: function(time) {
+    this.toleranceTime = time
     return this
   },
 
   // Returns true if the event is repeated, false otherwise
-  isRepeated: function() { return this.repeat !== undefined }
+  isRepeated: function() { return this.repeatTime !== null }
 
 })
 
 // ==================== WAAClock ==================== //
+var CLOCK_DEFAULTS = {
+  tickTime: 0.010,
+  lookAheadTime: 0.020
+}
+
 var WAAClock = module.exports = function(context, opts) {
   var self = this
-    , defaults = {
-      tickTime: 0.010,
-      lookAheadTime: 0.020,
-      maxJitterTime: 0.010,
-    }
-  opts = _.defaults(opts || {}, defaults)
-  _.extend(this, _.pick(opts, Object.keys(defaults)))
+  opts = _.defaults(opts || {}, CLOCK_DEFAULTS)
+  _.extend(this, _.pick(opts, Object.keys(CLOCK_DEFAULTS)))
   this.context = context
   initAudioContext(context, this)
   this._events = []
@@ -666,7 +674,7 @@ _.extend(WAAClock.prototype, {
     return event
   },
 
-  // Stretch scheduled time and repeat time of `events` by `ratio`, keeping
+  // Stretch time and repeat time of all scheduled `events` by `ratio`, keeping
   // their relative distance. In fact this is equivalent to changing the tempo.
   timeStretch: function(events, ratio) {
     var self = this
@@ -674,27 +682,27 @@ _.extend(WAAClock.prototype, {
       , tRef1 = eventRef.time
       , tRef2 = this._absTime(ratio * this._relTime(eventRef.time))
     events.forEach(function(event) {
-      self.setTime(event, tRef2 + ratio * (event.time - tRef1))
-      if(event.isRepeated()) self.setRepeat(event, event.repeat * ratio)
+      self._setTime(event, tRef2 + ratio * (event.time - tRef1))
+      if(event.isRepeated()) self._setRepeat(event, event.repeatTime * ratio)
     })
     return events
   },
 
+  // ---------- Private ---------- //
   // Unschedule `event`
-  clear: function(event) {
+  _clear: function(event) {
     this._removeEvent(event)
   },
 
-  // Sets the interval at which `event` repeats. `repeat` is in seconds.
-  setRepeat: function(event, repeat) {
-    if (repeat === 0)
+  // Sets the interval at which `event` repeats. `time` is in seconds.
+  _setRepeat: function(event, time) {
+    if (time === 0)
       throw new Error('delay cannot be 0')
-    event.repeat = repeat
+    event.repeatTime = time
   },
 
-  // Sets the occurence time of `event`. `time` is in seconds in the referential
-  // of the web audio API context.
-  setTime: function(event, time) {
+  // Sets the occurence time of `event`. `time` is in absolute time.
+  _setTime: function(event, time) {
     if (time < this.context.currentTime)
       throw new Error('cannot schedule an event in the past')
     this._removeEvent(event)
@@ -702,7 +710,6 @@ _.extend(WAAClock.prototype, {
     this._insertEvent(event)
   },
 
-  // ---------- Private ---------- //
   // This starts the periodical execution of `_tick`
   _start: function() {
     if (this._tickIntervalId === undefined) { 
@@ -724,7 +731,7 @@ _.extend(WAAClock.prototype, {
 
     // Execute the events
     while(event && event.time <= timeLookedAhead) {
-      if (event.time > this._absTime(-this.maxJitterTime)) {
+      if (event.time > this._absTime(-event.toleranceTime)) {
         event.func()
         event.emit('executed')
       } else {
@@ -732,7 +739,7 @@ _.extend(WAAClock.prototype, {
         console.warn('event expired')
       }
       if (event.isRepeated())
-        this.setTime(event, event.time + event.repeat)
+        this._setTime(event, event.time + event.repeatTime)
       event = this._events.shift()
     }
 
@@ -803,8 +810,7 @@ var initAudioContext = function(context, clock) {
       return initAudioNode(node, clock)
     }
   })
-  _.extend(context, AudioContextMixin, {_waac: clock})
-  return context
+  return _.extend(context, AudioContextMixin, {_waac: clock})
 }
 
 var AudioContextMixin = {
@@ -822,8 +828,12 @@ var initAudioNode = function(node, clock) {
   audioParams.forEach(function(audioParam) {
     _.extend(audioParam, AudioParamMixin, {_waac: clock})
   })
-  _.extend(node, AudioNodeMixin, {_waac: clock})
-  return node
+
+  // Adding start2/stop2 to nodes that have start/stop methods 
+  ;['start', 'stop'].forEach(function(methName) {
+    if (node[methName]) node[methName+'2'] = AudioNodeMixin[methName+'2']
+  })
+  return _.extend(node, {_waac: clock})
 }
 
 var AudioNodeMixin = {

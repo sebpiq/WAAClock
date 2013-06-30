@@ -1,6 +1,6 @@
 
   this.lookAheadTime = 0.020
-  this.expireTime = 0.010
+  this.tickTime = 0.010
 
 Normally, the context's clock doesn't start until you've created your first node ...
 

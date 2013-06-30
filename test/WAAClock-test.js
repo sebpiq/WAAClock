@@ -4,7 +4,7 @@ var assert = require('assert')
 var eToObj1 = function(event) {
   return {
     time: event.time,
-    repeat: event.repeat
+    repeat: event.repeatTime
   }
 }
 
@@ -54,11 +54,11 @@ describe('timeStretch', function() {
       , event1, event2, event3, ratio
     dummyContext.currentTime = 2.4
 
-    event1 = waaClock.setTimeout(cb, 2).setRepeat(2)
+    event1 = waaClock.setTimeout(cb, 2).repeat(2)
     dummyContext.currentTime = 3.0
-    event2 = waaClock.setTimeout(cb, 2).setRepeat(2)
+    event2 = waaClock.setTimeout(cb, 2).repeat(2)
     dummyContext.currentTime = 3.6
-    event3 = waaClock.setTimeout(cb, 2).setRepeat(2)
+    event3 = waaClock.setTimeout(cb, 2).repeat(2)
 
     assert.deepEqual(eToObj1(event1), {time: 4.4, repeat: 2})
     assert.deepEqual(eToObj1(event2), {time: 5.0, repeat: 2})
@@ -76,9 +76,9 @@ describe('timeStretch', function() {
     var waaClock = new WAAClock(dummyContext)
       , cb = function() {}
       , event1, event2, event3, ratio
-    event1 = waaClock.setTimeout(cb, 2).setRepeat(2)
-    event2 = waaClock.setTimeout(cb, 3).setRepeat(3)
-    event3 = waaClock.setTimeout(cb, 4).setRepeat(4)
+    event1 = waaClock.setTimeout(cb, 2).repeat(2)
+    event2 = waaClock.setTimeout(cb, 3).repeat(3)
+    event3 = waaClock.setTimeout(cb, 4).repeat(4)
 
     assert.deepEqual(eToObj1(event1), {time: 2, repeat: 2})
     assert.deepEqual(eToObj1(event2), {time: 3, repeat: 3})
@@ -96,7 +96,7 @@ describe('timeStretch', function() {
       , cb = function() {}
       , event1, event2, event3, ratio
     event1 = waaClock.setTimeout(cb, 1.76)
-    event2 = waaClock.setTimeout(cb, 3.1).setRepeat(1)
+    event2 = waaClock.setTimeout(cb, 3.1).repeat(1)
     event3 = waaClock.setTimeout(cb, 3.8)
 
     assert.deepEqual(eToObj1(event1), {time: 1.76, repeat: null})
@@ -112,7 +112,7 @@ describe('timeStretch', function() {
 
 })
 
-describe('setRepeat', function() {
+describe('_setRepeat', function() {
 
   beforeEach(function() {
     dummyContext = {
@@ -123,14 +123,14 @@ describe('setRepeat', function() {
   it('shouldn\'t set event\'s repeat', function() {
     var waaClock = new WAAClock(dummyContext)
       , event = waaClock._createEvent(function() {}, 1)
-    waaClock.setRepeat(event, 1.234)
+    waaClock._setRepeat(event, 1.234)
 
     assert.deepEqual(eToObj1(event), {time: 1, repeat: 1.234})
   })
 
 })
 
-describe('setTime', function() {
+describe('_setTime', function() {
 
   beforeEach(function() {
     dummyContext = {
@@ -147,11 +147,11 @@ describe('setTime', function() {
     assert.deepEqual(waaClock._events.map(eToObj1),
       [ {time: 0.5, repeat: null}, {time: 1, repeat: null}, {time: 2, repeat: null} ])
 
-    waaClock.setTime(event2, 1.234)
+    waaClock._setTime(event2, 1.234)
     assert.deepEqual(waaClock._events.map(eToObj1),
       [ {time: 1, repeat: null}, {time: 1.234, repeat: null}, {time: 2, repeat: null} ])
 
-    waaClock.setTime(event3, 0.2)
+    waaClock._setTime(event3, 0.2)
     assert.deepEqual(waaClock._events.map(eToObj1),
       [ {time: 0.2, repeat: null}, {time: 1, repeat: null}, {time: 1.234, repeat: null} ])
   })
@@ -209,7 +209,7 @@ describe('_tick', function() {
       , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
       , event1 = waaClock._createEvent(function() { called.push(1) }, 3)
       , event2 = waaClock._createEvent(function() { called.push(2) }, 1.2)
-    waaClock.setRepeat(event2, 1.2)
+    event2.repeat(1.2)
     
     // t=0 / look ahead=2.5
     waaClock._tick()
@@ -226,7 +226,7 @@ describe('_tick', function() {
     assert.deepEqual(called, [2, 2, 1, 2])
     dummyContext.currentTime += waaClock.tickTime
 
-    waaClock.clear(event2)
+    event2.clear()
     // t=3 / look ahead=5.5
     waaClock._tick()
     assert.deepEqual(called, [2, 2, 1, 2])
@@ -310,7 +310,7 @@ describe('_createEvent', function() {
     var waaClock = new WAAClock(dummyContext)
       , event = waaClock._createEvent(function() {}, 1000)
     assert.deepEqual(waaClock._events, [event])
-    waaClock.clear(event)
+    waaClock._clear(event)
     assert.deepEqual(waaClock._events, [])
   })
 
