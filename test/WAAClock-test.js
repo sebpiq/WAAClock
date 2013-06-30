@@ -16,7 +16,7 @@ var eToObj2 = function(event) {
 }
 
 // Just for testing, we don't want the clock to start
-WAAClock._start = function() {}
+WAAClock.prototype._start = function() {}
 
 var dummyContext = {
   currentTime: 0
@@ -99,15 +99,15 @@ describe('timeStretch', function() {
     event2 = waaClock.setTimeout(cb, 3.1).setRepeat(1)
     event3 = waaClock.setTimeout(cb, 3.8)
 
-    assert.deepEqual(eToObj1(event1), {time: 1.76, repeat: undefined})
+    assert.deepEqual(eToObj1(event1), {time: 1.76, repeat: null})
     assert.deepEqual(eToObj1(event2), {time: 3.1, repeat: 1})
-    assert.deepEqual(eToObj1(event3), {time: 3.8, repeat: undefined})
+    assert.deepEqual(eToObj1(event3), {time: 3.8, repeat: null})
 
     ratio = 1/2
     waaClock.timeStretch([event1, event2, event3], ratio)
-    assert.deepEqual(eToObj1(event1), {time: 1.76/2, repeat: undefined})
+    assert.deepEqual(eToObj1(event1), {time: 1.76/2, repeat: null})
     assert.deepEqual(eToObj1(event2), {time: 3.10/2, repeat: 0.5})
-    assert.deepEqual(eToObj1(event3), {time: 3.8/2, repeat: undefined})
+    assert.deepEqual(eToObj1(event3), {time: 3.8/2, repeat: null})
   })
 
 })
@@ -145,15 +145,15 @@ describe('setTime', function() {
       , event3 = waaClock._createEvent(function() {}, 2)
 
     assert.deepEqual(waaClock._events.map(eToObj1),
-      [ {time: 0.5, repeat: undefined}, {time: 1, repeat: undefined}, {time: 2, repeat: undefined} ])
+      [ {time: 0.5, repeat: null}, {time: 1, repeat: null}, {time: 2, repeat: null} ])
 
     waaClock.setTime(event2, 1.234)
     assert.deepEqual(waaClock._events.map(eToObj1),
-      [ {time: 1, repeat: undefined}, {time: 1.234, repeat: undefined}, {time: 2, repeat: undefined} ])
+      [ {time: 1, repeat: null}, {time: 1.234, repeat: null}, {time: 2, repeat: null} ])
 
     waaClock.setTime(event3, 0.2)
     assert.deepEqual(waaClock._events.map(eToObj1),
-      [ {time: 0.2, repeat: undefined}, {time: 1, repeat: undefined}, {time: 1.234, repeat: undefined} ])
+      [ {time: 0.2, repeat: null}, {time: 1, repeat: null}, {time: 1.234, repeat: null} ])
   })
 
 })
@@ -168,12 +168,10 @@ describe('_tick', function() {
 
   it('should execute simple events rightly', function() {
     var called = []
-      , waaClock = new WAAClock(dummyContext)
+      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
       , event1 = waaClock._createEvent(function() { called.push(1) }, 7.5)
       , event2 = waaClock._createEvent(function() { called.push(2) }, 3.51)
       , event3 = waaClock._createEvent(function() { called.push(3) }, 2.55)
-    waaClock.lookAheadTime = 2.5
-    waaClock.tickTime = 1
     
     // t=0 / look ahead=2.5
     waaClock._tick()
@@ -208,12 +206,10 @@ describe('_tick', function() {
 
   it('should execute repeated events', function() {
     var called = []
-      , waaClock = new WAAClock(dummyContext)
+      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
       , event1 = waaClock._createEvent(function() { called.push(1) }, 3)
       , event2 = waaClock._createEvent(function() { called.push(2) }, 1.2)
     waaClock.setRepeat(event2, 1.2)
-    waaClock.lookAheadTime = 2.5
-    waaClock.tickTime = 1
     
     // t=0 / look ahead=2.5
     waaClock._tick()
@@ -239,13 +235,11 @@ describe('_tick', function() {
 
   it('should emit \'executed\'', function() {
     var called = []
-      , waaClock = new WAAClock(dummyContext)
+      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
       , event1 = waaClock._createEvent(function() {}, 3)
       , event2 = waaClock._createEvent(function() {}, 1.2)
     event1.on('executed', function() { called.push('1-ok') })
     event2.on('executed', function() { called.push('2-ok') })
-    waaClock.lookAheadTime = 2.5
-    waaClock.tickTime = 1
 
     // t=0 / look ahead=2.5
     waaClock._tick()
@@ -256,6 +250,35 @@ describe('_tick', function() {
     waaClock._tick()
     assert.deepEqual(called, ['2-ok', '1-ok'])
     
+  })
+
+  it('should forget expired events and emit \'expired\'', function() {
+    var called = []
+      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 1, tickTime: 1})
+      , event1 = waaClock._createEvent(function() { called.push('1-ok') }, 2).tolerance(0.1)
+      , event2 = waaClock._createEvent(function() { called.push('2-ok') }, 5).tolerance(0.1)
+      , event3 = waaClock._createEvent(function() { called.push('3-ok') }, 7).tolerance(0.1)
+    event1.on('expired', function() { called.push('1-exp') })
+    event2.on('expired', function() { called.push('2-exp') })
+    event3.on('expired', function() { called.push('3-exp') })
+
+    dummyContext.currentTime = 2.1
+    // t=2.1 / look ahead=3.1
+    waaClock._tick()
+    assert.equal(waaClock._events.length, 2)
+    assert.deepEqual(called, ['1-exp'])
+
+    dummyContext.currentTime = 5.5
+    // t=5.5 / look ahead=6.5
+    waaClock._tick()
+    assert.equal(waaClock._events.length, 1)
+    assert.deepEqual(called, ['1-exp', '2-exp'])
+
+    dummyContext.currentTime = 7.05
+    // t=7.05 / look ahead=8.05
+    waaClock._tick()
+    assert.equal(waaClock._events.length, 0)
+    assert.deepEqual(called, ['1-exp', '2-exp', '3-ok'])
   })
 
 })
