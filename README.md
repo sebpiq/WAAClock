@@ -1,5 +1,5 @@
-WAAClock
-==========
+WAAClock.js
+=============
 
 Web Audio API doesn't provide a comprehensive API for scheduling things in the time. For example, it is hard or impossible to cancel events once they have been scheduled ; there is no way to schedule a custom event ; there is no way to schedule repeating events.
 
