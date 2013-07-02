@@ -18,13 +18,7 @@ var context = window.AudioContext ? new AudioContext() : new webkitAudioContext(
 var printer = function(msg) { return function() { console.log(msg) } }
 ```
 
-And now you can *schedule (approximatively) custom events* :
-
-```
-var event = clock.setTimeout(printer('wow!'), 13)
-```
-
-*Schedule (exactly), and cancel built-in Web Audio API events* :
+And now you can **schedule and cancel built-in Web Audio API events** :
 
 ```
 var osc = context.createOscillator()
@@ -37,13 +31,19 @@ clock.setTimeout(function() {
 }, 4)
 ```
 
-*You can set events to repeat periodically* :
+**Schedule (approximatively) custom events** :
+
+```
+var event = clock.setTimeout(printer('wow!'), 13)
+```
+
+**You can set events to repeat periodically** :
 
 ```javascript
 var event = clock.setTimeout(printer('wow!'), 3).repeat(2)
 ```
 
-*Change the tempo of a group of events* :
+**Change the tempo of a group of events** :
 
 ```javascript
 var event1 = clock.setTimeout(printer('wow!'), 1).repeat(2)
