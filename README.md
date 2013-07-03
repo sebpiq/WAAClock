@@ -16,7 +16,7 @@ And now you can :
 
 **Schedule and cancel built-in Web Audio API events** :
 
-```
+```javascript
 var osc = context.createOscillator()
   , startEvent = osc.start2(5)
   , freqChangeEvent = osc.frequency.setValueAtTime2(220, 5)
@@ -29,7 +29,7 @@ clock.setTimeout(function() {
 
 **Schedule (approximatively) custom events** :
 
-```
+```javascript
 var event = clock.setTimeout(function() { console.log('wow!') }, 13)
 ```
 
@@ -59,7 +59,31 @@ Check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock.js/t
 API
 ----
 
-TBD
+**Writing in progress**
+
+###WAAClock(context, opts)
+
+This is the main object taking care of all the scheduling. It takes an `AudioContext` as first argument and patches it in order to add new properties on some Web Audio API objects.
+
+The clock checks for upcoming events every `tickTime` seconds and schedules them to be run at the desired time with whatever **native** mechanism is available for doing so.
+This is the reason why you can cancel events : they are actually queued and scheduled only at the last moment.
+
+You can control this behaviour with the options `tickTime` and `lookAheadTime`. For example :
+
+```javascript
+// t=1, looks-up events between t=1 and t=3 : event1 scheduled for t=3 and can't be canceled anymore.
+// t=2, looks-up events between t=2 and t=4 : no event.
+// t=3, looks-up events between t=3 and t=5 : event2 scheduled for t=5 and can't be canceled anymore.
+var clock = new WAAClock(context, {tickTime: 1, lookAheadTime: 2})
+  , event1 = clock.setTimeout(function() {}, 3)
+  , event2 = clock.setTimeout(function() {}, 5)
+```
+
+
+
+For Web Audio API event like `start` or `setValueAtTime`, under the hood the native functions are used, which means that the timing is exact.
+For custom events, `setTimeout` is used, which means that the timing is very approximative.
+
 
 License
 --------
