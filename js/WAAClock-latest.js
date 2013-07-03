@@ -716,7 +716,7 @@ _.extend(WAAClock.prototype, {
       var self = this
       this._tickIntervalId = setInterval(function() {
         self._tick()
-      }, this.tickTime)
+      }, this.tickTime * 1000)
       self._tick()
     }
     // Force the context's clock to start 
