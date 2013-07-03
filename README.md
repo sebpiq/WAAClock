@@ -5,20 +5,16 @@ Web Audio API doesn't provide a comprehensive API for scheduling things in the t
 
 `WAAClock` adds a very thin layer allowing you to play with the time in a more easy way.
 
-First download the latest stable release of `WAAClock.js` from [dist/](https://github.com/sebpiq/WAAClock/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
+First download the latest stable release of `WAAClock.js` from [dist/](https://github.com/sebpiq/WAAClock.js/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
 
 ```javascript
 var context = window.AudioContext ? new AudioContext() : new webkitAudioContext()
   , clock = new WAAClock(context)
 ```
 
-(Prepare a function for the demos :)
+And now you can :
 
-```javascript
-var printer = function(msg) { return function() { console.log(msg) } }
-```
-
-And now you can **schedule and cancel built-in Web Audio API events** :
+**Schedule and cancel built-in Web Audio API events** :
 
 ```
 var osc = context.createOscillator()
@@ -34,20 +30,20 @@ clock.setTimeout(function() {
 **Schedule (approximatively) custom events** :
 
 ```
-var event = clock.setTimeout(printer('wow!'), 13)
+var event = clock.setTimeout(function() { console.log('wow!') }, 13)
 ```
 
 **You can set events to repeat periodically** :
 
 ```javascript
-var event = clock.setTimeout(printer('wow!'), 3).repeat(2)
+var event = clock.setTimeout(function() { console.log('wow!') }, 3).repeat(2)
 ```
 
 **Change the tempo of a group of events** :
 
 ```javascript
-var event1 = clock.setTimeout(printer('wow!'), 1).repeat(2)
-  , event2 = clock.setTimeout(printer('what?'), 2).repeat(2)
+var event1 = clock.setTimeout(function() { console.log('wow!') }, 1).repeat(2)
+  , event2 = clock.setTimeout(function() { console.log('what?') }, 2).repeat(2)
   , tempoChange = clock.setTimeout(function() {
     clock.timeStretch([event1, event2], 0.5)
   }, 10)
@@ -58,7 +54,7 @@ var event1 = clock.setTimeout(printer('wow!'), 1).repeat(2)
 Examples
 ---------
 
-Check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/beatSequence.html).
+Check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock.js/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock.js/beatSequence.html).
 
 API
 ----
