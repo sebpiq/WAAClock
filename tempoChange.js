@@ -1,5 +1,5 @@
 var context = typeof AudioContext === 'undefined' ? new webkitAudioContext() : new AudioContext()
-  , clock = new WAAClock(context)
+  , clock = new WAAClock(context, {tickTime: 0.01, lookAheadTime: 0.1})
   , osc = context.createOscillator()
   , currentTempo = 60
 osc.connect(context.destination)

@@ -9,7 +9,7 @@ var context = typeof AudioContext === 'undefined' ? new webkitAudioContext() : n
 // Using `WAAClock.setTimeout` we create an event that will be executed at t=0, then repeated every `beatDur`   //
 // (so at t=0, t=1*beatDur, t=2*beatDur, ...).                                                                  //
 // We also set a very big tolerance, because we don't want an event to be dropped just because it is late.      //
-var event = clock.setTimeout(uiNextBeat, 0)
+var event = clock.callbackAtTime(uiNextBeat, 0)
   .repeat(beatDur)
   .tolerance(100)
 
