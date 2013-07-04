@@ -669,7 +669,7 @@ _.extend(WAAClock.prototype, {
   setTimeout: function(func, delay) {
     var self = this
       , event = this._createEvent(function() {
-        setTimeout(func, self._relTime(event.time))
+        setTimeout(func, self._relTime(event.time) * 1000)
       }, this._absTime(delay))
     return event
   },
@@ -702,12 +702,13 @@ _.extend(WAAClock.prototype, {
   },
 
   // Sets the occurence time of `event`. `time` is in absolute time.
+  // If the new time is within `lookAheadTime`, we handle the event immediately
   _setTime: function(event, time) {
-    if (time < this.context.currentTime)
-      throw new Error('cannot schedule an event in the past')
     this._removeEvent(event)
     event.time = time
-    this._insertEvent(event)
+    if (event.time <= this._absTime(this.lookAheadTime))
+      this._handleEvent(event)
+    else this._insertEvent(event)
   },
 
   // This starts the periodical execution of `_tick`
@@ -729,22 +730,26 @@ _.extend(WAAClock.prototype, {
     var timeLookedAhead = this._absTime(this.lookAheadTime)
       , event = this._events.shift()
 
-    // Execute the events
     while(event && event.time <= timeLookedAhead) {
-      if (event.time > this._absTime(-event.toleranceTime)) {
-        event.func()
-        event.emit('executed')
-      } else {
-        event.emit('expired')
-        console.warn('event expired')
-      }
-      if (event.isRepeated())
-        this._setTime(event, event.time + event.repeatTime)
+      this._handleEvent(event)
       event = this._events.shift()
     }
 
     // Put back the last event
     if(event) this._events.unshift(event)
+  },
+
+  // Handles an event
+  _handleEvent: function(event) {
+    if (event.time > this._absTime(-event.toleranceTime)) {
+      event.func()
+      event.emit('executed')
+    } else {
+      event.emit('expired')
+      console.warn('event expired')
+    }
+    if (event.isRepeated())
+      this._setTime(event, event.time + event.repeatTime)
   },
 
   // Creates an event and insert it to the list
