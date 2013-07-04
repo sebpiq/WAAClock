@@ -3,7 +3,54 @@ WAAClock.js
 
 Web Audio API doesn't provide a comprehensive API for scheduling things in the time. For example, it is hard or impossible to cancel events once they have been scheduled ; there is no way to schedule a custom event ; there is no way to schedule repeating events.
 
-`WAAClock` adds a very thin layer allowing you to play with the time in a more easy way.
+`WAAClock` adds a very thin layer allowing you to play with the time in a more easy way :
+
+**Schedule and cancel built-in Web Audio API events**
+
+```javascript
+var osc = context.createOscillator()
+  , startEvent = osc.start2(5)
+  , freqChangeEvent = osc.frequency.setValueAtTime2(220, 5)
+
+// cancel those events in 4 seconds
+clock.setTimeout(function() {
+  startEvent.clear()
+  freqChangeEvent.clear()
+}, 4)
+```
+
+**Schedule (approximatively) custom events**
+
+```javascript
+// prints 'wow!' at content.currentTime = 13
+var event = clock.callbackAtTime(function() { console.log('wow!') }, 13)
+// prints 'wow!' in 13 seconds
+var event = clock.setTimeout(function() { console.log('wow!') }, 13)
+```
+
+**Set events to repeat periodically**
+
+```javascript
+var event = clock.callbackAtTime(function() { console.log('wow!') }, 3).repeat(2)
+```
+
+**Change the tempo of a group of events**
+
+```javascript
+var event1 = clock.callbackAtTime(function() { console.log('wow!') }, 1).repeat(2)
+  , event2 = clock.callbackAtTime(function() { console.log('what?') }, 2).repeat(2)
+
+// in 10 seconds, the tempo will be multiplied by 2
+clock.setTimeout(function() {
+  clock.timeStretch([event1, event2], 0.5)
+}, 10)
+```
+
+**note :** this library is still being developed, please, please, please, report any bugs, request features, give feedback.
+
+
+Getting started
+----------------
 
 First download the latest stable release of `WAAClock.js` from [dist/](https://github.com/sebpiq/WAAClock.js/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
 
@@ -12,44 +59,6 @@ var context = window.AudioContext ? new AudioContext() : new webkitAudioContext(
   , clock = new WAAClock(context)
 ```
 
-And now you can :
-
-**Schedule and cancel built-in Web Audio API events** :
-
-```javascript
-var osc = context.createOscillator()
-  , startEvent = osc.start2(5)
-  , freqChangeEvent = osc.frequency.setValueAtTime2(220, 5)
-
-clock.setTimeout(function() {
-  startEvent.clear()
-  freqChangeEvent.clear()
-}, 4)
-```
-
-**Schedule (approximatively) custom events** :
-
-```javascript
-var event = clock.setTimeout(function() { console.log('wow!') }, 13)
-```
-
-**You can set events to repeat periodically** :
-
-```javascript
-var event = clock.setTimeout(function() { console.log('wow!') }, 3).repeat(2)
-```
-
-**Change the tempo of a group of events** :
-
-```javascript
-var event1 = clock.setTimeout(function() { console.log('wow!') }, 1).repeat(2)
-  , event2 = clock.setTimeout(function() { console.log('what?') }, 2).repeat(2)
-  , tempoChange = clock.setTimeout(function() {
-    clock.timeStretch([event1, event2], 0.5)
-  }, 10)
-```
-
-**note :** this library is still being developed, please, please, please, report any bugs, request features, give feedback.
 
 Examples
 ---------
