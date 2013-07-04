@@ -93,3 +93,8 @@ Released under MIT license
 Change log
 -----------
 
+###0.1.2
+
+- added `callbackAtTime` and bug fixes
+- bug fixes
+
