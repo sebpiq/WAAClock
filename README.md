@@ -92,15 +92,15 @@ var clock = new WAAClock(context, {tickTime: 1, lookAheadTime: 2})
 // third tick t=3, schedules events between t=3 and t=5 : `event2` scheduled and can't be canceled anymore.
 ```
 
-###WAAClock.callbackAtTime(func, time)
+###callbackAtTime(func, time)
 
 Schedules `func` to run at `time` in seconds, and returns an `Event` object.
 
-###WAAClock.setTimeout(func, delay)
+###setTimeout(func, delay)
 
 Schedules `func` to run after `delay` seconds, and returns an `Event` object.
 
-###WAAClock.timeStretch(events, ratio)
+###timeStretch(events, ratio)
 
 Stretch time and repeat time of `events` by `ratio`, keeping their relative distance.
 In fact this is equivalent to changing the tempo.
@@ -126,19 +126,19 @@ Cancels the event execution. This will work only if the event hasn't been schedu
 
 ##AudioNode
 
-###AudioNode.start2(time)
+###start2(time)
 
 Creates an event which will call the node's `start` method at `time`.
 Note that only audio nodes which have the `start` method will have the method `start2`.
 
-###AudioNode.stop2(time)
+###stop2(time)
 
 Creates an event which will call the node's `stop` method at `time`.
 Note that only audio nodes which have the `stop` method will have the method `stop2`.
 
 ##AudioParam
 
-###AudioParam.setValueAtTime2(val, time)
+###setValueAtTime2(val, time)
 
 Creates an event which will call the audio param's `setValueAtTime` method at `time`.
 
