@@ -22,7 +22,7 @@ clock.setTimeout(function() {
 **Schedule (approximatively) custom events**
 
 ```javascript
-// prints 'wow!' at content.currentTime = 13
+// prints 'wow!' at context.currentTime = 13
 var event = clock.callbackAtTime(function() { console.log('wow!') }, 13)
 // prints 'wow!' in 13 seconds
 var event = clock.setTimeout(function() { console.log('wow!') }, 13)
@@ -72,26 +72,25 @@ API
 
 ###WAAClock(context, opts)
 
-This is the main object taking care of all the scheduling. It takes an `AudioContext` as first argument and patches it in order to add new properties on some Web Audio API objects.
+`WAAClock` handles all the scheduling work. It is the only object you need to create directly.
+It takes an `AudioContext` as first argument and patches it to add new methods on Web Audio API objects.
 
-The clock checks for upcoming events every `tickTime` seconds and schedules them to be run at the desired time with whatever **native** mechanism is available for doing so.
-This is the reason why you can cancel events : they are actually queued and scheduled only at the last moment.
+For methods like `start2` or `setValueAtTime2`, under the hood the native methods are used, which means that the timing is exact.
+For custom events, `setTimeout` is used, which means that the timing is very approximative.
 
+Because Web Audio API events cannot be cancelled, `WAAClock` simply queues all events, and schedules them only at the last moment.
 You can control this behaviour with the options `tickTime` and `lookAheadTime`. For example :
 
 ```javascript
-// t=1, looks-up events between t=1 and t=3 : event1 scheduled for t=3 and can't be canceled anymore.
-// t=2, looks-up events between t=2 and t=4 : no event.
-// t=3, looks-up events between t=3 and t=5 : event2 scheduled for t=5 and can't be canceled anymore.
 var clock = new WAAClock(context, {tickTime: 1, lookAheadTime: 2})
-  , event1 = clock.setTimeout(function() {}, 3)
-  , event2 = clock.setTimeout(function() {}, 5)
+  , event1 = clock.callbackAtTime(function() {}, 3)
+  , event2 = clock.callbackAtTime(function() {}, 5)
+// We've scheduled `event1` to run at t=3 and `event2` at t=5. The clock ticks every 1 second,
+// so let's imagine what will happen :
+// first tick, t=1, schedules events between t=1 and t=3 : `event1` scheduled and can't be canceled anymore.
+// second tick, t=2, schedules events between t=2 and t=4 : nothing.
+// third tick t=3, schedules events between t=3 and t=5 : `event2` scheduled and can't be canceled anymore.
 ```
-
-
-
-For Web Audio API event like `start` or `setValueAtTime`, under the hood the native functions are used, which means that the timing is exact.
-For custom events, `setTimeout` is used, which means that the timing is very approximative.
 
 
 License
