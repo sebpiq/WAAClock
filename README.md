@@ -12,11 +12,9 @@ var osc = context.createOscillator()
   , startEvent = osc.start2(5)
   , freqChangeEvent = osc.frequency.setValueAtTime2(220, 5)
 
-// cancel those events in 4 seconds
-clock.setTimeout(function() {
-  startEvent.clear()
-  freqChangeEvent.clear()
-}, 4)
+// uuh ... I changed my mind, let's cancel those events
+startEvent.clear()
+freqChangeEvent.clear()
 ```
 
 **Schedule (approximatively) custom events**
@@ -49,8 +47,8 @@ clock.setTimeout(function() {
 **note :** this library is still being developed, please, please, please, report any bugs, request features, give feedback.
 
 
-Getting started
-----------------
+Getting started and examples
+-----------------------------
 
 First download the latest stable release of `WAAClock.js` from [dist/](https://github.com/sebpiq/WAAClock.js/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
 
@@ -59,16 +57,10 @@ var context = window.AudioContext ? new AudioContext() : new webkitAudioContext(
   , clock = new WAAClock(context)
 ```
 
-
-Examples
----------
-
-Check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock.js/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock.js/beatSequence.html).
+For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock.js/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock.js/beatSequence.html).
 
 API
 ----
-
-**Writing in progress**
 
 ##WAAClock(context, opts)
 
@@ -152,6 +144,6 @@ Change log
 
 ###0.1.2
 
-- added `callbackAtTime` and bug fixes
+- added `callbackAtTime`
 - bug fixes
 
