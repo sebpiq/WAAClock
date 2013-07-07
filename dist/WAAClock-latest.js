@@ -611,10 +611,14 @@ if (typeof AudioContext === 'undefined') {
 // ==================== Event ==================== //
 var Event = function(clock, time, func) {
   this.clock = clock
-  this.time = time
   this.func = func
   this.repeatTime = null
-  this.toleranceTime = 0.010
+  this.toleranceLate = 0.010
+  this.toleranceEarly = 0.010
+  this._expireTime = null
+  this._earliestTime = null
+  this.time = time
+  this._update()
 }
 inherits(Event, EventEmitter)
 
@@ -622,32 +626,58 @@ _.extend(Event.prototype, {
   
   // Unschedules the event
   clear: function() {
-    this.clock._clear(this)
+    this.clock._removeEvent(this)
     return this
   },
 
   // Sets the event to repeat every `time` seconds.
   repeat: function(time) {
-    this.clock._setRepeat(this, time)
+    if (time === 0)
+      throw new Error('delay cannot be 0')
+    this.repeatTime = time
     return this
   },
 
-  // Sets the tolerance of the event. If the event is executed more than 
-  // `time` seconds behind the expected date, it will be dropped.
-  tolerance: function(time) {
-    this.toleranceTime = time
+  // Sets the time tolerance of the event.
+  // The event will be executed in the interval `[time - early, time + late]`
+  // where `time` is the event's due date. If the clock fails to execute the event in time,
+  // the event will be dropped.
+  tolerance: function(late, early) {
+    if (_.isNumber(late))
+      this.toleranceLate = late
+    if (_.isNumber(early))
+      this.toleranceEarly = early
+    this._update()
     return this
   },
 
   // Returns true if the event is repeated, false otherwise
-  isRepeated: function() { return this.repeatTime !== null }
+  isRepeated: function() { return this.repeatTime !== null },
+
+  // Sets the occurence time of `event`. `time` is in absolute time.
+  // If the new time is within the event tolerance, we handle the event immediately
+  _setTime: function(time) {
+    this.time = time
+    this._update()
+    if (this.clock.context.currentTime >= this._earliestTime) {
+      this.clock._removeEvent(this)
+      this.clock._handleEvent(this)
+    }
+  },
+
+  _update: function() {
+    this._expireTime = this.time + this.toleranceLate
+    this._earliestTime = this.time - this.toleranceEarly
+    this.clock._removeEvent(this)
+    this.clock._insertEvent(this)
+  }
 
 })
 
 // ==================== WAAClock ==================== //
 var CLOCK_DEFAULTS = {
-  tickTime: 0.010,
-  lookAheadTime: 0.020
+  toleranceLate: 0.10,
+  toleranceEarly: 0.001
 }
 
 var WAAClock = module.exports = function(context, opts) {
@@ -667,22 +697,14 @@ _.extend(WAAClock.prototype, {
   // This method tries to schedule the event as accurately as possible,
   // but it will never be exact as `AudioNode.start` or `AudioParam.scheduleSetValue`.
   setTimeout: function(func, delay) {
-    var self = this
-      , event = this._createEvent(function() {
-        setTimeout(func, self._relTime(event.time) * 1000)
-      }, this._absTime(delay))
-    return event
+    return this._createEvent(func, this._absTime(delay)).tolerance(null, 0)
   },
 
   // Schedule `func` to run at `time`.
   // This method tries to schedule the event as accurately as possible,
   // but it will never be exact as `AudioNode.start` or `AudioParam.scheduleSetValue`.
   callbackAtTime: function(func, time) {
-    var self = this
-      , event = this._createEvent(function() {
-        setTimeout(func, self._relTime(event.time) * 1000)
-      }, time)
-    return event
+    return this._createEvent(func, time).tolerance(null, 0)
   },
 
   // Stretch time and repeat time of all scheduled `events` by `ratio`, keeping
@@ -693,55 +715,31 @@ _.extend(WAAClock.prototype, {
       , tRef1 = eventRef.time
       , tRef2 = this._absTime(ratio * this._relTime(eventRef.time))
     events.forEach(function(event) {
-      self._setTime(event, tRef2 + ratio * (event.time - tRef1))
-      if(event.isRepeated()) self._setRepeat(event, event.repeatTime * ratio)
+      event._setTime(tRef2 + ratio * (event.time - tRef1))
+      if(event.isRepeated()) event.repeat(event.repeatTime * ratio)
     })
     return events
   },
 
   // ---------- Private ---------- //
-  // Unschedule `event`
-  _clear: function(event) {
-    this._removeEvent(event)
-  },
-
-  // Sets the interval at which `event` repeats. `time` is in seconds.
-  _setRepeat: function(event, time) {
-    if (time === 0)
-      throw new Error('delay cannot be 0')
-    event.repeatTime = time
-  },
-
-  // Sets the occurence time of `event`. `time` is in absolute time.
-  // If the new time is within `lookAheadTime`, we handle the event immediately
-  _setTime: function(event, time) {
-    this._removeEvent(event)
-    event.time = time
-    if (event.time <= this._absTime(this.lookAheadTime))
-      this._handleEvent(event)
-    else this._insertEvent(event)
-  },
-
   // This starts the periodical execution of `_tick`
   _start: function() {
-    if (this._tickIntervalId === undefined) { 
-      var self = this
-      this._tickIntervalId = setInterval(function() {
-        self._tick()
-      }, this.tickTime * 1000)
-      self._tick()
+    var self = this
+      , bufferSize = 256
+    // We have to keep a reference to the node to avoid garbage collection
+    this._clockNode = this.context.createJavaScriptNode(bufferSize, 1, 1)
+    this._clockNode.connect(this.context.destination)
+    this._clockNode.onaudioprocess = function () {
+      setTimeout(function() { self._tick() }, 0)
     }
-    // Force the context's clock to start 
-    this.context.createBufferSource()
   },
 
   // This function is ran periodically, and at each tick it executes
-  // events for that are scheduled to happen in a time <= `lookAheadTime`.
+  // events for which `currentTime` is included in their tolerance interval.
   _tick: function() {
-    var timeLookedAhead = this._absTime(this.lookAheadTime)
-      , event = this._events.shift()
+    var event = this._events.shift()
 
-    while(event && event.time <= timeLookedAhead) {
+    while(event && event._earliestTime <= this.context.currentTime) {
       this._handleEvent(event)
       event = this._events.shift()
     }
@@ -752,7 +750,7 @@ _.extend(WAAClock.prototype, {
 
   // Handles an event
   _handleEvent: function(event) {
-    if (event.time > this._absTime(-event.toleranceTime)) {
+    if (this.context.currentTime < event._expireTime) {
       event.func()
       event.emit('executed')
     } else {
@@ -760,19 +758,19 @@ _.extend(WAAClock.prototype, {
       console.warn('event expired')
     }
     if (event.isRepeated())
-      this._setTime(event, event.time + event.repeatTime)
+      event._setTime(event.time + event.repeatTime)
   },
 
   // Creates an event and insert it to the list
   _createEvent: function(func, time) {
     var event = new Event(this, time, func)
-    this._insertEvent(event)
+    event.tolerance(this.toleranceLate, this.toleranceEarly)
     return event
   },
 
   // Inserts an event to the list
   _insertEvent: function(event) {
-    this._events.splice(this._indexByTime(event.time), 0, event)
+    this._events.splice(this._indexByTime(event._earliestTime), 0, event)
   },
 
   // Removes an event from the list
@@ -783,7 +781,7 @@ _.extend(WAAClock.prototype, {
 
   // Returns the index of the first event whose time is >= to `time`
   _indexByTime: function(time) {
-    return _.sortedIndex(this._events, {time: time}, function(e) { return e.time })
+    return _.sortedIndex(this._events, {_earliestTime: time}, function(e) { return e._earliestTime })
   },
 
   // Converts from relative time to absolute time

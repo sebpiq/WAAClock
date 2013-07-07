@@ -38,6 +38,115 @@ describe('Event', function() {
     assert.deepEqual(called, ['bla'])
   })
 
+  describe('tolerance', function() {
+
+    it('should get the default tolerance', function() {
+      var waaClock = new WAAClock(dummyContext, {tolerance: {early: 11, late: 22}})
+        , event = waaClock._createEvent(function(){}, 5)
+      assert.equal(event.toleranceLate, waaClock.toleranceLate)
+      assert.equal(event.toleranceEarly, waaClock.toleranceEarly)
+    })
+
+    it('shouldn\'t change the tolerance if value not provided', function() {
+      var waaClock = new WAAClock(dummyContext, {tolerance: {early: 11, late: 22}})
+        , event = waaClock._createEvent(function(){}, 5)
+      assert.equal(event.toleranceLate, waaClock.toleranceLate)
+      assert.equal(event.toleranceEarly, waaClock.toleranceEarly)
+
+      event.tolerance(88)
+      assert.equal(event.toleranceLate, 88)
+      assert.equal(event.toleranceEarly, waaClock.toleranceEarly)
+
+      event.tolerance(null, 999)
+      assert.equal(event.toleranceLate, 88)
+      assert.equal(event.toleranceEarly, 999)
+    })
+
+    it('should update cached values', function() {
+      var waaClock = new WAAClock(dummyContext)
+        , event = waaClock._createEvent(function(){}, 5).tolerance(33, 2)
+
+      assert.equal(event.time, 5)
+      assert.equal(event.toleranceLate, 33)
+      assert.equal(event.toleranceEarly, 2)
+      assert.equal(event._expireTime, 5 + 33)
+      assert.equal(event._earliestTime, 5 - 2)
+
+      event._setTime(10)
+      assert.equal(event.time, 10)
+      assert.equal(event.toleranceLate, 33)
+      assert.equal(event.toleranceEarly, 2)
+      assert.equal(event._expireTime, 10 + 33)
+      assert.equal(event._earliestTime, 10 - 2)
+
+      event.tolerance(11, 4)
+      assert.equal(event.time, 10)
+      assert.equal(event.toleranceLate, 11)
+      assert.equal(event.toleranceEarly, 4)
+      assert.equal(event._expireTime, 10 + 11)
+      assert.equal(event._earliestTime, 10 - 4)
+    })
+
+  })
+
+  describe('_setTime', function() {
+
+    beforeEach(function() {
+      dummyContext = {
+        currentTime: 0
+      }
+    })
+
+    it('should set time and update the list of events', function() {
+      var waaClock = new WAAClock(dummyContext)
+        , event1 = waaClock._createEvent(function() {}, 1)
+        , event2 = waaClock._createEvent(function() {}, 0.5)
+        , event3 = waaClock._createEvent(function() {}, 2)
+
+      assert.deepEqual(waaClock._events.map(eToObj1),
+        [ {time: 0.5, repeat: null}, {time: 1, repeat: null}, {time: 2, repeat: null} ])
+
+      event2._setTime(1.234)
+      assert.deepEqual(waaClock._events.map(eToObj1),
+        [ {time: 1, repeat: null}, {time: 1.234, repeat: null}, {time: 2, repeat: null} ])
+
+      event3._setTime(0.2)
+      assert.deepEqual(waaClock._events.map(eToObj1),
+        [ {time: 0.2, repeat: null}, {time: 1, repeat: null}, {time: 1.234, repeat: null} ])
+    })
+
+  })
+
+  describe('repeat', function() {
+
+    beforeEach(function() {
+      dummyContext = {
+        currentTime: 0
+      }
+    })
+
+    it('should set event\'s repeat', function() {
+      var waaClock = new WAAClock(dummyContext)
+        , event = waaClock._createEvent(function() {}, 1)
+      event.repeat(1.234)
+
+      assert.deepEqual(eToObj1(event), {time: 1, repeat: 1.234})
+    })
+
+  })
+
+  describe('clear', function() {
+
+    it('should remove event when calling clear', function() {
+      var waaClock = new WAAClock(dummyContext)
+        , event = waaClock._createEvent(function() {}, 1000)
+      assert.deepEqual(waaClock._events, [event])
+      event.clear()
+      assert.deepEqual(waaClock._events, [])
+    })
+
+  })
+
 })
 
 describe('timeStretch', function() {
@@ -112,52 +221,6 @@ describe('timeStretch', function() {
 
 })
 
-describe('_setRepeat', function() {
-
-  beforeEach(function() {
-    dummyContext = {
-      currentTime: 0
-    }
-  })
-
-  it('shouldn\'t set event\'s repeat', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , event = waaClock._createEvent(function() {}, 1)
-    waaClock._setRepeat(event, 1.234)
-
-    assert.deepEqual(eToObj1(event), {time: 1, repeat: 1.234})
-  })
-
-})
-
-describe('_setTime', function() {
-
-  beforeEach(function() {
-    dummyContext = {
-      currentTime: 0
-    }
-  })
-
-  it('should set time and update the list of events', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , event1 = waaClock._createEvent(function() {}, 1)
-      , event2 = waaClock._createEvent(function() {}, 0.5)
-      , event3 = waaClock._createEvent(function() {}, 2)
-
-    assert.deepEqual(waaClock._events.map(eToObj1),
-      [ {time: 0.5, repeat: null}, {time: 1, repeat: null}, {time: 2, repeat: null} ])
-
-    waaClock._setTime(event2, 1.234)
-    assert.deepEqual(waaClock._events.map(eToObj1),
-      [ {time: 1, repeat: null}, {time: 1.234, repeat: null}, {time: 2, repeat: null} ])
-
-    waaClock._setTime(event3, 0.2)
-    assert.deepEqual(waaClock._events.map(eToObj1),
-      [ {time: 0.2, repeat: null}, {time: 1, repeat: null}, {time: 1.234, repeat: null} ])
-  })
-
-})
-
 describe('_tick', function() {
 
   beforeEach(function() {
@@ -168,37 +231,35 @@ describe('_tick', function() {
 
   it('should execute simple events rightly', function() {
     var called = []
-      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
-      , event1 = waaClock._createEvent(function() { called.push(1) }, 7.5)
+      , waaClock = new WAAClock(dummyContext)
+      , event1 = waaClock._createEvent(function() { called.push(1) }, 9)
       , event2 = waaClock._createEvent(function() { called.push(2) }, 3.51)
       , event3 = waaClock._createEvent(function() { called.push(3) }, 2.55)
+    event1.tolerance(null, 4)
+    event2.tolerance(null, 2.5)
+    event3.tolerance(null, 2.5)
     
-    // t=0 / look ahead=2.5
+    // t=0
     waaClock._tick()
     assert.deepEqual(called, [])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
-    // t=1 / look ahead=3.5
+    // t=1
     waaClock._tick()
     assert.deepEqual(called, [3])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
-    // t=2 / look ahead=4.5
+    // t=2
     waaClock._tick()
     assert.deepEqual(called, [3, 2])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 2
 
-    // t=3 / look ahead=5.5
+    // t=4
     waaClock._tick()
     assert.deepEqual(called, [3, 2])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
-    // t=4 / look ahead=6.5
-    waaClock._tick()
-    assert.deepEqual(called, [3, 2])
-    dummyContext.currentTime += waaClock.tickTime
-
-    // t=5 / look ahead=7.5
+    // t=5
     waaClock._tick()
     assert.deepEqual(called, [3, 2, 1])
     assert.deepEqual(waaClock._events, [])
@@ -206,7 +267,7 @@ describe('_tick', function() {
 
   it('should execute repeated events', function() {
     var called = []
-      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
+      , waaClock = new WAAClock(dummyContext, {toleranceEarly: 2.5})
       , event1 = waaClock._createEvent(function() { called.push(1) }, 3)
       , event2 = waaClock._createEvent(function() { called.push(2) }, 1.2)
     event2.repeat(1.2)
@@ -214,28 +275,28 @@ describe('_tick', function() {
     // t=0 / look ahead=2.5
     waaClock._tick()
     assert.deepEqual(called, [2, 2])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
     // t=1 / look ahead=3.5
     waaClock._tick()
     assert.deepEqual(called, [2, 2, 1])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
     // t=2 / look ahead=4.5
     waaClock._tick()
     assert.deepEqual(called, [2, 2, 1, 2])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
     event2.clear()
     // t=3 / look ahead=5.5
     waaClock._tick()
     assert.deepEqual(called, [2, 2, 1, 2])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
   })
 
   it('should emit \'executed\'', function() {
     var called = []
-      , waaClock = new WAAClock(dummyContext, {lookAheadTime: 2.5, tickTime: 1})
+      , waaClock = new WAAClock(dummyContext, {toleranceEarly: 2.5})
       , event1 = waaClock._createEvent(function() {}, 3)
       , event2 = waaClock._createEvent(function() {}, 1.2)
     event1.on('executed', function() { called.push('1-ok') })
@@ -244,7 +305,7 @@ describe('_tick', function() {
     // t=0 / look ahead=2.5
     waaClock._tick()
     assert.deepEqual(called, ['2-ok'])
-    dummyContext.currentTime += waaClock.tickTime
+    dummyContext.currentTime += 1
 
     // t=1 / look ahead=3.5
     waaClock._tick()
@@ -306,37 +367,29 @@ describe('_createEvent', function() {
     ])
   })
 
-  it('should remove event when calling clear', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , event = waaClock._createEvent(function() {}, 1000)
-    assert.deepEqual(waaClock._events, [event])
-    waaClock._clear(event)
-    assert.deepEqual(waaClock._events, [])
-  })
-
 })
 
 describe('_insertEvent', function() {
 
   it('should insert events at the right position', function() {
     var waaClock = new WAAClock(dummyContext)
-    waaClock._events = [{time: 2}, {time: 3}, {time: 7}, {time: 11}]
+    waaClock._events = [{_earliestTime: 2}, {_earliestTime: 3}, {_earliestTime: 7}, {_earliestTime: 11}]
 
-    waaClock._insertEvent({time: 1})
-    assert.deepEqual(waaClock._events, [{time: 1}, {time: 2}, {time: 3}, {time: 7},
-      {time: 11}])
+    waaClock._insertEvent({_earliestTime: 1})
+    assert.deepEqual(waaClock._events, [{_earliestTime: 1}, {_earliestTime: 2}, {_earliestTime: 3},
+      {_earliestTime: 7}, {_earliestTime: 11}])
 
-    waaClock._insertEvent({time: 13})
-    assert.deepEqual(waaClock._events, [{time: 1}, {time: 2}, {time: 3}, {time: 7},
-      {time: 11}, {time: 13}])
+    waaClock._insertEvent({_earliestTime: 13})
+    assert.deepEqual(waaClock._events, [{_earliestTime: 1}, {_earliestTime: 2}, {_earliestTime: 3},
+      {_earliestTime: 7}, {_earliestTime: 11}, {_earliestTime: 13}])
 
-    waaClock._insertEvent({time: 9})
-    assert.deepEqual(waaClock._events, [{time: 1}, {time: 2}, {time: 3}, {time: 7},
-      {time: 9}, {time: 11}, {time: 13}])
+    waaClock._insertEvent({_earliestTime: 9})
+    assert.deepEqual(waaClock._events, [{_earliestTime: 1}, {_earliestTime: 2}, {_earliestTime: 3},
+      {_earliestTime: 7}, {_earliestTime: 9}, {_earliestTime: 11}, {_earliestTime: 13}])
 
-    waaClock._insertEvent({time: 2, bla: 34})
-    assert.deepEqual(waaClock._events, [{time: 1}, {time: 2, bla: 34}, {time: 2},
-      {time: 3}, {time: 7}, {time: 9}, {time: 11}, {time: 13}])
+    waaClock._insertEvent({_earliestTime: 2, bla: 34})
+    assert.deepEqual(waaClock._events, [{_earliestTime: 1}, {_earliestTime: 2, bla: 34}, {_earliestTime: 2},
+      {_earliestTime: 3}, {_earliestTime: 7}, {_earliestTime: 9}, {_earliestTime: 11}, {_earliestTime: 13}])
   })
 
 })
@@ -345,16 +398,18 @@ describe('_removeEvent', function() {
 
   it('should remove events rightly', function() {
     var waaClock = new WAAClock(dummyContext)
-    waaClock._events = [{time: 2}, {time: 3}, {time: 4}, {time: 10.5}, {time: 11}]
+    waaClock._events = [{_earliestTime: 2}, {_earliestTime: 3}, {_earliestTime: 4},
+      {_earliestTime: 10.5}, {_earliestTime: 11}]
 
     waaClock._removeEvent(waaClock._events[1])
-    assert.deepEqual(waaClock._events, [{time: 2}, {time: 4}, {time: 10.5}, {time: 11}])
+    assert.deepEqual(waaClock._events, [{_earliestTime: 2}, {_earliestTime: 4}, {_earliestTime: 10.5},
+      {_earliestTime: 11}])
 
     waaClock._removeEvent(waaClock._events[0])
-    assert.deepEqual(waaClock._events, [{time: 4}, {time: 10.5}, {time: 11}])
+    assert.deepEqual(waaClock._events, [{_earliestTime: 4}, {_earliestTime: 10.5}, {_earliestTime: 11}])
 
     waaClock._removeEvent(waaClock._events[waaClock._events.length - 1])
-    assert.deepEqual(waaClock._events, [{time: 4}, {time: 10.5}])
+    assert.deepEqual(waaClock._events, [{_earliestTime: 4}, {_earliestTime: 10.5}])
   })
 
 })
@@ -363,7 +418,8 @@ describe('_indexByTime', function() {
   
   it('should find the right index', function() {
     var waaClock = new WAAClock(dummyContext)
-    waaClock._events = [{time: 2}, {time: 3}, {time: 7}, {time: 7}, {time: 7}, {time: 11}]
+    waaClock._events = [{_earliestTime: 2}, {_earliestTime: 3}, {_earliestTime: 7}, {_earliestTime: 7},
+      {_earliestTime: 7}, {_earliestTime: 11}]
 
     assert.equal(waaClock._indexByTime(3), 1)
     assert.equal(waaClock._indexByTime(2), 0)
