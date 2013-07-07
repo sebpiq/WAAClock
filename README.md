@@ -142,6 +142,12 @@ Released under MIT license
 Change log
 -----------
 
+###0.2.0
+
+- changed the tick method from `setInterval` to `ScriptProcessorNode`
+- added event's `toleranceEarly` and `toleranceLate`
+- removed clock `tickTime` and `lookAheadTime` options
+
 ###0.1.2
 
 - added `callbackAtTime`
