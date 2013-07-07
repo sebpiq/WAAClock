@@ -656,7 +656,7 @@ _.extend(Event.prototype, {
 
   // Sets the occurence time of `event`. `time` is in absolute time.
   // If the new time is within the event tolerance, we handle the event immediately
-  _setTime: function(time) {
+  _schedule: function(time) {
     this.time = time
     this._update()
     if (this.clock.context.currentTime >= this._earliestTime) {
@@ -713,10 +713,10 @@ _.extend(WAAClock.prototype, {
     var self = this
       , eventRef = _.min(events, function(e) { return e.time })
       , tRef1 = eventRef.time
-      , tRef2 = this._absTime(ratio * this._relTime(eventRef.time))
+      , tRef2 = this._absTime(ratio * this._relTime(tRef1))
     events.forEach(function(event) {
-      event._setTime(tRef2 + ratio * (event.time - tRef1))
       if(event.isRepeated()) event.repeat(event.repeatTime * ratio)
+      event._schedule(tRef2 + ratio * (event.time - tRef1))
     })
     return events
   },
@@ -758,7 +758,7 @@ _.extend(WAAClock.prototype, {
       console.warn('event expired')
     }
     if (event.isRepeated())
-      event._setTime(event.time + event.repeatTime)
+      event._schedule(event.time + event.repeatTime)
   },
 
   // Creates an event and insert it to the list

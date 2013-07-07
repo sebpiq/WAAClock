@@ -72,7 +72,7 @@ describe('Event', function() {
       assert.equal(event._expireTime, 5 + 33)
       assert.equal(event._earliestTime, 5 - 2)
 
-      event._setTime(10)
+      event._schedule(10)
       assert.equal(event.time, 10)
       assert.equal(event.toleranceLate, 33)
       assert.equal(event.toleranceEarly, 2)
@@ -89,7 +89,7 @@ describe('Event', function() {
 
   })
 
-  describe('_setTime', function() {
+  describe('_schedule', function() {
 
     beforeEach(function() {
       dummyContext = {
@@ -106,11 +106,11 @@ describe('Event', function() {
       assert.deepEqual(waaClock._events.map(eToObj1),
         [ {time: 0.5, repeat: null}, {time: 1, repeat: null}, {time: 2, repeat: null} ])
 
-      event2._setTime(1.234)
+      event2._schedule(1.234)
       assert.deepEqual(waaClock._events.map(eToObj1),
         [ {time: 1, repeat: null}, {time: 1.234, repeat: null}, {time: 2, repeat: null} ])
 
-      event3._setTime(0.2)
+      event3._schedule(0.2)
       assert.deepEqual(waaClock._events.map(eToObj1),
         [ {time: 0.2, repeat: null}, {time: 1, repeat: null}, {time: 1.234, repeat: null} ])
     })
@@ -181,7 +181,7 @@ describe('timeStretch', function() {
     assert.deepEqual(eToObj1(event3), {time: 4.1 + (1.2 * ratio), repeat: 0.5})
   })
 
-  it('should stretch rightly events with different intervals', function() {
+  it('should stretch rightly events with different repeat', function() {
     var waaClock = new WAAClock(dummyContext)
       , cb = function() {}
       , event1, event2, event3, ratio
@@ -198,6 +198,23 @@ describe('timeStretch', function() {
     assert.deepEqual(eToObj1(event1), {time: 1, repeat: 1})
     assert.deepEqual(eToObj1(event2), {time: 1.5, repeat: 1.5})
     assert.deepEqual(eToObj1(event3), {time: 2, repeat: 2})
+  })
+
+  it('should work also if the event is very close', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2, event3, ratio
+    event1 = waaClock.callbackAtTime(cb, 1).repeat(2)
+    event2 = waaClock.callbackAtTime(cb, 2).repeat(2)
+
+    assert.deepEqual(eToObj1(event1), {time: 1, repeat: 2})
+    assert.deepEqual(eToObj1(event2), {time: 2, repeat: 2})
+
+    ratio = 1/2
+    dummyContext.currentTime = 1
+    waaClock.timeStretch([event1, event2], ratio)
+    assert.deepEqual(eToObj1(event1), {time: 2, repeat: 1})
+    assert.deepEqual(eToObj1(event2), {time: 1.5, repeat: 1})
   })
 
   it('should stretch rightly with events that do not repeat', function() {
