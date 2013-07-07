@@ -9,7 +9,7 @@ Web Audio API doesn't provide a comprehensive API for scheduling things in the t
 
 ```javascript
 var osc = context.createOscillator()
-  , startEvent = osc.start2(5)
+  , startEvent = osc.start2(5)    // or `noteOn2` if older version of Web Audio API
   , freqChangeEvent = osc.frequency.setValueAtTime2(220, 5)
 
 // uuh ... I changed my mind, let's cancel those events
@@ -17,7 +17,7 @@ startEvent.clear()
 freqChangeEvent.clear()
 ```
 
-**Schedule (approximatively) custom events**
+**Schedule custom events**
 
 ```javascript
 // prints 'wow!' at context.currentTime = 13
@@ -67,22 +67,16 @@ API
 `WAAClock` handles all the scheduling work. It is the only object you need to create directly.
 It takes an `AudioContext` as first argument and patches it to add new methods on Web Audio API objects.
 
-For methods like `start2` or `setValueAtTime2`, under the hood the native methods are used, which means that the timing is exact.
-For custom events, `setTimeout` is used, which means that the timing is very approximative.
-
 Because Web Audio API events cannot be cancelled, `WAAClock` simply queues all events, and schedules them only at the last moment.
-You can control this behaviour with the options `tickTime` and `lookAheadTime`. For example :
+In fact, each event has a tolerance zone *[t1, t2]* in which it should be executed.
+Each event is scheduled as soon as the clock enters its tolerance zone.
+On the other hand, if the event hasn't been scheduled when the clock gets out of the tolerance zone, the event will be dropped.
+Therefore, you should use this setting wisely : a too tight upper bound (`lateTolerance`), and the event can be dropped abusively, 
+a too loose lower bound (`earlyTolerance`), and the event will be scheduled too early.
 
-```javascript
-var clock = new WAAClock(context, {tickTime: 1, lookAheadTime: 2})
-  , event1 = clock.callbackAtTime(function() {}, 3)
-  , event2 = clock.callbackAtTime(function() {}, 5)
-// We've scheduled `event1` to run at t=3 and `event2` at t=5. The clock ticks every 1 second,
-// so let's imagine what will happen :
-// first tick, t=1, schedules events between t=1 and t=3 : `event1` scheduled and can't be canceled anymore.
-// second tick, t=2, schedules events between t=2 and t=4 : nothing.
-// third tick t=3, schedules events between t=3 and t=5 : `event2` scheduled and can't be canceled anymore.
-```
+You can set the default tolerance with the options `lateTolerance` and `earlyTolerance`.
+You can also set the tolerance on a "per-event" basis, by calling the `tolerance` method of the event.
+
 
 ###callbackAtTime(func, time)
 
@@ -118,12 +112,12 @@ Cancels the event execution. This will work only if the event hasn't been schedu
 
 ##AudioNode
 
-###start2(time)
+###start2(time) / noteOn2(time)
 
 Creates an event which will call the node's `start` method at `time`.
 Note that only audio nodes which have the `start` method will have the method `start2`.
 
-###stop2(time)
+###stop2(time) / noteOff2(time)
 
 Creates an event which will call the node's `stop` method at `time`.
 Note that only audio nodes which have the `stop` method will have the method `stop2`.
@@ -147,6 +141,7 @@ Change log
 - changed the tick method from `setInterval` to `ScriptProcessorNode`
 - added event's `toleranceEarly` and `toleranceLate`
 - removed clock `tickTime` and `lookAheadTime` options
+- added support for old Web Audio API names
 
 ###0.1.2
 
