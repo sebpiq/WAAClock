@@ -3,7 +3,7 @@ var context = typeof AudioContext === 'undefined' ? new webkitAudioContext() : n
   , tempo = QUERY.tempo || 120
   , signature = QUERY.signature || 4
   , beatDur = 60/tempo, barDur = signature * beatDur
-  , clock = new WAAClock(context, {tickTime: 0.05, lookAheadTime: 0.1})
+  , clock = new WAAClock(context, {toleranceEarly: 0.1})
 
 // The following code highlights the current beat in the UI by calling the function `uiNextBeat` periodically.
 var event = clock.callbackAtTime(uiNextBeat, 0)
@@ -15,7 +15,8 @@ var startBeat = function(track, beatInd) {
   var scheduleBeat = function(time) {
     var bufferNode = soundBank[track]()
       , redo = function() { scheduleBeat(event.time + barDur) }
-      , event = bufferNode.start2(time).tolerance(0.01)
+      , event = (bufferNode.start ? bufferNode.start2(time) : bufferNode.noteOn2(time))
+        .tolerance(0.01)
     event.on('executed', redo)
     event.on('expired', redo)
     beats[track][beatInd] = event
