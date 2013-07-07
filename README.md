@@ -95,12 +95,9 @@ In fact this is equivalent to changing the tempo.
 
 Every scheduling method returns an event object. All methods from `Event` return the calling event, so that you can chain them.
 
-###tolerance(time)
+###tolerance(late, early)
 
-If for any reason (too short lookAheadTime, browser too slow, ...) the event cannot be scheduled on time, it will be dropped.
-You can control this behaviour by setting the event's tolerance.
-If tolerance is 0, the event will be dropped as soon as it falls behind.
-If tolerance is 1, the event will be dropped if it is more than 1 second late. And so on ...
+Sets the event's tolerance. See `WAAClock` for a detailed explanation.
 
 ###repeat(time)
 
@@ -109,6 +106,24 @@ Sets the event to repeat every `time` seconds.
 ###clear()
 
 Cancels the event execution. This will work only if the event hasn't been scheduled yet (see WAAClock for more infos).
+
+### Event: 'executed'
+
+This message is emitted when the event has been executed. You can listen to it by calling `on` :
+
+```javascript
+event.on('executed', function() { console.log('yeaay! :)') })
+```
+
+
+### Event: 'expired'
+
+This message is emitted when the clock fell out of the event tolerance zone.
+You can listen to it by calling `on` :
+
+```javascript
+event.on('expired', function() { console.log('oooh :(!') })
+```
 
 ##AudioNode
 
