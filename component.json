@@ -5,6 +5,10 @@
   "version": "0.1.2",
   "keywords": [ "web audio api", "web audio", "audio", "sound", "music" ],
   "scripts": [ "index.js", "lib/WAAClock.js" ],
+  "web-audio": {
+    "type": "tool",
+    "version": "0.1.x" 
+  },
   "dependencies": {
     "component/underscore": "*"
   },
