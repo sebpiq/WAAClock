@@ -1,3 +1,7 @@
+// Detect Web Audio API
+if (typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined')
+  alert('Your browser doesn\'t seem to support Web Audio API')
+
 // Code highlight
 $(function() {
   var jsFileName = document.URL.split('/').slice(-1)[0].replace('.html', '.js')
