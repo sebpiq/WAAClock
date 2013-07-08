@@ -1,0 +1,17 @@
+{
+  "name": "WAAClock",
+  "repo": "sebpiq/WAAClock",
+  "description": "A comprehensive event scheduling tool for Web Audio API.",
+  "version": "0.1.2",
+  "keywords": [ "web audio api", "web audio", "audio", "sound", "music" ],
+  "scripts": [ "index.js", "lib/WAAClock.js" ],
+  "dependencies": {
+    "component/underscore": "1.4.x"
+  },
+  "development": {
+    "component/assert": "*",
+    "visionmedia/mocha": "*"
+  },
+  "demo": "http://sebpiq.github.io/WAAClock/beatSequence.html",
+  "license": "MIT"
+}

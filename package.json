@@ -2,16 +2,12 @@
   "name": "WAAClock",
   "version": "0.1.2",
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
-  "description": "A very precise event scheduler for Web Audio API, using AudioContext's clock",
+  "description": "A comprehensive event scheduling tool for Web Audio API.",
   "repository": {
     "type": "git",
     "url": "git@github.com:sebpiq/WAAClock.git"
   },
-  "keywords": [
-    "web audio api",
-    "sound",
-    "music"
-  ],
+  "keywords": [ "web audio api", "web audio", "audio", "sound", "music" ],
   "dependencies": {
     "underscore": "1.4.x"
   },
