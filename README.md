@@ -50,14 +50,14 @@ clock.setTimeout(function() {
 Getting started and examples
 -----------------------------
 
-First download the latest stable release of `WAAClock.js` from [dist/](https://github.com/sebpiq/WAAClock.js/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
+First download the latest stable release of `WAAClock` from [dist/](https://github.com/sebpiq/WAAClock/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
 
 ```javascript
 var context = window.AudioContext ? new AudioContext() : new webkitAudioContext()
   , clock = new WAAClock(context)
 ```
 
-For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock.js/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock.js/beatSequence.html).
+For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/beatSequence.html).
 
 API
 ----
