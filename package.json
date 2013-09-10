@@ -1,6 +1,6 @@
 {
   "name": "WAAClock",
-  "version": "0.1.2",
+  "version": "0.3",
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "A comprehensive event scheduling tool for Web Audio API.",
   "repository": {
@@ -13,7 +13,8 @@
   },
   "devDependencies": {
     "browserify": "2.22.x",
-    "mocha": "1.11.x"
+    "mocha": "1.11.x",
+    "web-audio-api": "*"
   },
   "license": "MIT"
 }

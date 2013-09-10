@@ -1,5 +1,5 @@
 var assert = require('assert')
-  , WAAClock = require('../lib/WAAClock')
+  , WAAClock = require('../index')
 
 var eToObj1 = function(event) {
   return {

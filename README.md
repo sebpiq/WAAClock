@@ -3,7 +3,7 @@ WAAClock.js
 
 Web Audio API doesn't provide a comprehensive API for scheduling things in the time. For example, it is hard or impossible to cancel events once they have been scheduled ; there is no way to schedule a custom event ; there is no way to schedule repeating events.
 
-`WAAClock` adds a very thin layer allowing you to play with the time in a more easy way :
+`WAAClock(audioContext)` adds a very thin layer allowing you to play with the time in a more easy way.
 
 **Schedule and cancel built-in Web Audio API events**
 
@@ -143,6 +143,12 @@ Note that only audio nodes which have the `stop` method will have the method `st
 
 Creates an event which will call the audio param's `setValueAtTime` method at `time`.
 
+Running the tests
+------------------
+
+Tests are written with mocha. Just install mocha globally and run `mocha` from the root directory.
+Integration with `node-web-audio-api` is tested manually running `node test/node-web-audio-api-test.js`.
+
 License
 --------
 
@@ -150,6 +156,10 @@ Released under MIT license
 
 Change log
 -----------
+
+###0.3.0
+
+- added support for [node-web-audio-api](https://github.com/sebpiq/node-web-audio-api)
 
 ###0.2.0
 
