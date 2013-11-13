@@ -72,7 +72,7 @@ describe('Event', function() {
       assert.equal(event._expireTime, 5 + 33)
       assert.equal(event._earliestTime, 5 - 2)
 
-      event._schedule(10)
+      event.schedule(10)
       assert.equal(event.time, 10)
       assert.equal(event.toleranceLate, 33)
       assert.equal(event.toleranceEarly, 2)
@@ -89,7 +89,7 @@ describe('Event', function() {
 
   })
 
-  describe('_schedule', function() {
+  describe('schedule', function() {
 
     beforeEach(function() {
       dummyContext = {
@@ -106,11 +106,11 @@ describe('Event', function() {
       assert.deepEqual(waaClock._events.map(eToObj1),
         [ {time: 0.5, repeat: null}, {time: 1, repeat: null}, {time: 2, repeat: null} ])
 
-      event2._schedule(1.234)
+      event2.schedule(1.234)
       assert.deepEqual(waaClock._events.map(eToObj1),
         [ {time: 1, repeat: null}, {time: 1.234, repeat: null}, {time: 2, repeat: null} ])
 
-      event3._schedule(0.2)
+      event3.schedule(0.2)
       assert.deepEqual(waaClock._events.map(eToObj1),
         [ {time: 0.2, repeat: null}, {time: 1, repeat: null}, {time: 1.234, repeat: null} ])
     })

@@ -71,7 +71,8 @@ Because Web Audio API events cannot be cancelled, `WAAClock` simply queues all e
 In fact, each event has a tolerance zone *[t1, t2]* in which it should be executed.
 Each event is scheduled as soon as the clock enters its tolerance zone.
 On the other hand, if the event hasn't been scheduled when the clock gets out of the tolerance zone, the event will be dropped.
-Therefore, you should use this setting wisely : a too tight upper bound (`lateTolerance`), and the event can be dropped abusively, 
+Once the event has been scheduled, it cannot be cancelled anymore, and **will** be executed.
+Therefore, you should set the tolerance wisely : a too tight upper bound (`lateTolerance`), and the event can be dropped abusively, 
 a too loose lower bound (`earlyTolerance`), and the event will be scheduled too early.
 
 You can set the default tolerance with the options `lateTolerance` and `earlyTolerance`.
@@ -94,6 +95,14 @@ In fact this is equivalent to changing the tempo.
 ##Event
 
 Every scheduling method returns an event object. All methods from `Event` return the calling event, so that you can chain them.
+
+###time
+
+The time at which the event is scheduled.
+
+###schedule(time)
+
+Reschedule an event, `time` is the absolute time as given by `context.currentTime`.
 
 ###tolerance(late, early)
 
@@ -156,6 +165,10 @@ Released under MIT license
 
 Change log
 -----------
+
+###0.3.1
+
+- made `schedule` method of `Event` public.
 
 ###0.3.0
 
