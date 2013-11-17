@@ -102,7 +102,7 @@ The time at which the event is scheduled.
 
 ###schedule(time)
 
-Reschedule an event, `time` is the absolute time as given by `context.currentTime`.
+Reschedule an event, `time` is the absolute time as given by `context.currentTime`. Pass `null` as time if you want to remove the repeat.
 
 ###tolerance(late, early)
 
