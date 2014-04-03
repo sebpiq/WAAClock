@@ -110,7 +110,7 @@ Sets the event's tolerance. See `WAAClock` for a detailed explanation.
 
 ###repeat(time)
 
-Sets the event to repeat every `time` seconds.
+Sets the event to repeat every `time` seconds. Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
 
 ###clear()
 
