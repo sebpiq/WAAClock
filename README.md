@@ -166,6 +166,10 @@ Released under MIT license
 Change log
 -----------
 
+###0.3.2
+
+- bug fix
+
 ###0.3.1
 
 - made `schedule` method of `Event` public.
