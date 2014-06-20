@@ -5,18 +5,6 @@ Web Audio API doesn't provide a comprehensive API for scheduling things in the t
 
 `WAAClock(audioContext)` adds a very thin layer allowing you to play with the time in a more easy way.
 
-**Schedule and cancel built-in Web Audio API events**
-
-```javascript
-var osc = context.createOscillator()
-  , startEvent = osc.start2(5)    // or `noteOn2` if older version of Web Audio API
-  , freqChangeEvent = osc.frequency.setValueAtTime2(220, 5)
-
-// uuh ... I changed my mind, let's cancel those events
-startEvent.clear()
-freqChangeEvent.clear()
-```
-
 **Schedule custom events**
 
 ```javascript
@@ -44,7 +32,8 @@ clock.setTimeout(function() {
 }, 10)
 ```
 
-**note :** this library is still being developed, please, please, please, report any bugs, request features, give feedback.
+**note :** this library uses current web audio API specification. Some older browsers still use prefixed / deprecated function names. You can use [Chris Wilson's AudioContext-MonkeyPatch](https://github.com/cwilso/AudioContext-MonkeyPatch) if you want to support those older browsers as well.
+**note2 :** this is still a work in progress, please report any bugs, request features, give feedback.
 
 
 Getting started and examples
@@ -78,6 +67,13 @@ a too loose lower bound (`earlyTolerance`), and the event will be scheduled too 
 You can set the default tolerance with the options `lateTolerance` and `earlyTolerance`.
 You can also set the tolerance on a "per-event" basis, by calling the `tolerance` method of the event.
 
+###start()
+
+Starts the clock.
+
+###stop()
+
+Stops the clock.
 
 ###callbackAtTime(func, time)
 
@@ -134,23 +130,6 @@ You can listen to it by calling `on` :
 event.on('expired', function() { console.log('oooh :(!') })
 ```
 
-##AudioNode
-
-###start2(time) / noteOn2(time)
-
-Creates an event which will call the node's `start` method at `time`.
-Note that only audio nodes which have the `start` method will have the method `start2`.
-
-###stop2(time) / noteOff2(time)
-
-Creates an event which will call the node's `stop` method at `time`.
-Note that only audio nodes which have the `stop` method will have the method `stop2`.
-
-##AudioParam
-
-###setValueAtTime2(val, time)
-
-Creates an event which will call the audio param's `setValueAtTime` method at `time`.
 
 Running the tests
 ------------------
@@ -165,6 +144,13 @@ Released under MIT license
 
 Change log
 -----------
+
+###0.4.0
+
+- made `WAAClock.start` method public
+- `WAAClock.stop` method
+- removed web audio API monkey-patching
+- removed support for old web audio API functions
 
 ###0.3.2
 

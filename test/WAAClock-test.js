@@ -16,7 +16,7 @@ var eToObj2 = function(event) {
 }
 
 // Just for testing, we don't want the clock to start
-WAAClock.prototype._start = function() {}
+WAAClock.prototype.start = function() {}
 
 var dummyContext = {
   currentTime: 0
