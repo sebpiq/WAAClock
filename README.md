@@ -33,6 +33,7 @@ clock.setTimeout(function() {
 ```
 
 **note :** this library uses current web audio API specification. Some older browsers still use prefixed / deprecated function names. You can use [Chris Wilson's AudioContext-MonkeyPatch](https://github.com/cwilso/AudioContext-MonkeyPatch) if you want to support those older browsers as well.
+
 **note2 :** this is still a work in progress, please report any bugs, request features, give feedback.
 
 
@@ -44,6 +45,7 @@ First download the latest stable release of `WAAClock` from [dist/](https://gith
 ```javascript
 var context = window.AudioContext ? new AudioContext() : new webkitAudioContext()
   , clock = new WAAClock(context)
+clock.start()
 ```
 
 For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/beatSequence.html).
@@ -147,7 +149,7 @@ Change log
 
 ###0.4.0
 
-- made `WAAClock.start` method public
+- made `WAAClock.start` method public, and `start` needs to be called explicitely
 - `WAAClock.stop` method
 - removed web audio API monkey-patching
 - removed support for old web audio API functions
