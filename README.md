@@ -1,7 +1,7 @@
 WAAClock.js
 =============
 
-Web Audio API doesn't provide a comprehensive API for scheduling things in the time. For example, it is hard or impossible to cancel events once they have been scheduled ; there is no way to schedule a custom event ; there is no way to schedule repeating events.
+Web Audio API doesn't provide a comprehensive API for scheduling things in the time. For example, it is hard or impossible to cancel events once they have been scheduled ; there is no way to schedule a custom event ; there is no way to schedule repeating events ; or change tempo.
 
 `WAAClock(audioContext)` adds a very thin layer allowing you to play with the time in a more easy way.
 
@@ -20,6 +20,15 @@ var event = clock.setTimeout(function() { console.log('wow!') }, 13)
 var event = clock.callbackAtTime(function() { console.log('wow!') }, 3).repeat(2)
 ```
 
+**Cancel an event**
+
+```javascript
+// Start an oscillator node at context.currentTime = 13
+var event = clock.callbackAtTime(function() { oscNode.start(13) }, 13)
+// ... but change your mind and cancel that
+event.clear()
+```
+
 **Change the tempo of a group of events**
 
 ```javascript
@@ -33,8 +42,6 @@ clock.setTimeout(function() {
 ```
 
 **note :** this library uses current web audio API specification. Some older browsers still use prefixed / deprecated function names. You can use [Chris Wilson's AudioContext-MonkeyPatch](https://github.com/cwilso/AudioContext-MonkeyPatch) if you want to support those older browsers as well.
-
-**note2 :** this is still a work in progress, please report any bugs, request features, give feedback.
 
 
 Getting started and examples
@@ -56,7 +63,6 @@ API
 ##WAAClock(context, opts)
 
 `WAAClock` handles all the scheduling work. It is the only object you need to create directly.
-It takes an `AudioContext` as first argument and patches it to add new methods on Web Audio API objects.
 
 Because Web Audio API events cannot be cancelled, `WAAClock` simply queues all events, and schedules them only at the last moment.
 In fact, each event has a tolerance zone *[t1, t2]* in which it should be executed.
@@ -100,7 +106,7 @@ The time at which the event is scheduled.
 
 ###schedule(time)
 
-Reschedule an event, `time` is the absolute time as given by `context.currentTime`. Pass `null` as time if you want to remove the repeat.
+Reschedule an event, `time` is the absolute time as given by `context.currentTime`.
 
 ###tolerance(late, early)
 
@@ -108,7 +114,7 @@ Sets the event's tolerance. See `WAAClock` for a detailed explanation.
 
 ###repeat(time)
 
-Sets the event to repeat every `time` seconds. Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
+Sets the event to repeat every `time` seconds.  If you want to remove the repeat you can pass `null`. Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
 
 ###clear()
 
