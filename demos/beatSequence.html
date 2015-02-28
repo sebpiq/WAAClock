@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>WAAClock examples</title>
-  <script src="js/WAAClock-latest.js"></script>
+  <script src="../dist/WAAClock-latest.js"></script>
   <script src="js/jquery-1.9.1.js"></script>
   <script src="js/jquery-ui-1.10.3.js"></script>
   <script src="js/common.js"></script>
@@ -34,7 +34,9 @@
   
   <script>
     // Function for moving the beat cursor
-    var beatCount = -1, uiNextBeat = function() {
+    var beatCount = -1
+
+    var uiNextBeat = function() {
       beatCount = (beatCount + 1) % signature
       $('#pattern td').removeClass('active')
       $('#pattern td:nth-child('+(beatCount+1)+')').addClass('active')

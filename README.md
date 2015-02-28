@@ -55,7 +55,7 @@ var context = window.AudioContext ? new AudioContext() : new webkitAudioContext(
 clock.start()
 ```
 
-For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/beatSequence.html).
+For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/demos/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/demos/beatSequence.html).
 
 API
 ----
@@ -83,9 +83,9 @@ Starts the clock.
 
 Stops the clock.
 
-###callbackAtTime(func, time)
+###callbackAtTime(func, deadline)
 
-Schedules `func` to run at `time` in seconds, and returns an `Event` object.
+Schedules `func` to run before `deadline` in seconds, and returns an `Event` object.
 
 ###setTimeout(func, delay)
 
@@ -100,13 +100,13 @@ In fact this is equivalent to changing the tempo.
 
 Every scheduling method returns an event object. All methods from `Event` return the calling event, so that you can chain them.
 
-###time
+###deadline
 
-The time at which the event is scheduled.
+The deadline of the event.
 
-###schedule(time)
+###schedule(deadline)
 
-Reschedule an event, `time` is the absolute time as given by `context.currentTime`.
+Reschedule the deadline of an event, `deadline` is the absolute time as given by `context.currentTime`.
 
 ###tolerance(values)
 
@@ -173,6 +173,7 @@ Change log
 - removed support for prefixed AudioContext
 - removed underscore dependency
 - changed `Event.tolerance` API
+- renamed `Event.time` to `Event.deadline`
 
 ###0.4.0
 

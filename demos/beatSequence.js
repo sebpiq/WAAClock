@@ -1,27 +1,29 @@
-var context = typeof AudioContext === 'undefined' ? new webkitAudioContext() : new AudioContext()
-  , soundBank = {}, beats = {}
+if (!window.AudioContext) alert('you browser doesnt support Web Audio API')
+
+var context = new AudioContext()
+  , soundBank = {}
+  , beats = {}
   , tempo = QUERY.tempo || 120
   , signature = QUERY.signature || 4
-  , beatDur = 60/tempo, barDur = signature * beatDur
+  , beatDur = 60/tempo
+  , barDur = signature * beatDur
   , clock = new WAAClock(context, {toleranceEarly: 0.1})
+clock.start()
 
 // The following code highlights the current beat in the UI by calling the function `uiNextBeat` periodically.
 var event = clock.callbackAtTime(uiNextBeat, 0)
   .repeat(beatDur)
-  .tolerance(100)
+  .tolerance({late: 100})
 
 // This function activates the beat `beatInd` of `track`.
 var startBeat = function(track, beatInd) {
-  var scheduleBeat = function(time) {
-    var bufferNode = soundBank[track]()
-      , redo = function() { scheduleBeat(event.time + barDur) }
-      , event = (bufferNode.start ? bufferNode.start2(time) : bufferNode.noteOn2(time))
-        .tolerance(0.01)
-    event.on('executed', redo)
-    event.on('expired', redo)
-    beats[track][beatInd] = event
-  }
-  scheduleBeat(nextBeatTime(beatInd))
+  var event = clock.callbackAtTime(function(event) {
+    var bufferNode = soundBank[track].createNode()
+    bufferNode.start(event.deadline)
+  }, nextBeatTime(beatInd))
+  event.repeat(barDur)
+  event.tolerance({late: 0.01})
+  beats[track][beatInd] = event
 }
 
 // This function deactivates the beat `beatInd` of `track`.
@@ -54,7 +56,7 @@ var loadTrack = function(track) {
         node.connect(context.destination)
         return node
       }
-      soundBank[track] = createNode
+      soundBank[track] = { createNode: createNode }
     })
   }
   request.send()
