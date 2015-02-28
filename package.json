@@ -7,8 +7,16 @@
     "type": "git",
     "url": "git@github.com:sebpiq/WAAClock.git"
   },
-  "keywords": [ "web audio api", "web audio", "audio", "sound", "music" ],
-  "dependencies": {},
+  "keywords": [
+    "web audio api",
+    "web audio",
+    "audio",
+    "sound",
+    "music"
+  ],
+  "dependencies": {
+    "setimmediate": "^1.0.2"
+  },
   "devDependencies": {
     "browserify": "2.22.x",
     "mocha": "1.11.x",
@@ -16,6 +24,6 @@
   },
   "scripts": {
     "build": "browserify index.js > dist/WAAClock-latest.js"
-  }, 
+  },
   "license": "MIT"
 }
