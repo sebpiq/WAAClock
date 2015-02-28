@@ -2,19 +2,21 @@ var assert = require('assert')
   , WAAClock = require('../index')
 
 var round = function(val) {
-  return Math.round(val * 10000) / 10000
+  if (typeof val === 'number')
+    return Math.round(val * 10000) / 10000
+  return val
 }
 
 var eToObj1 = function(event) {
   return {
-    deadline: event.deadline,
-    repeat: event.repeatTime
+    deadline: round(event.deadline),
+    repeat: round(event.repeatTime)
   }
 }
 
 var eToObj2 = function(event) {
   return {
-    deadline: event.deadline,
+    deadline: round(event.deadline),
     func: event.func
   }
 }
@@ -70,21 +72,21 @@ describe('Event', function() {
       assert.equal(event.deadline, 5)
       assert.equal(event.toleranceLate, 33)
       assert.equal(event.toleranceEarly, 2)
-      assert.equal(event._expireTime, 5 + 33)
+      assert.equal(event._latestTime, 5 + 33)
       assert.equal(event._earliestTime, 5 - 2)
 
       event.schedule(10)
       assert.equal(event.deadline, 10)
       assert.equal(event.toleranceLate, 33)
       assert.equal(event.toleranceEarly, 2)
-      assert.equal(event._expireTime, 10 + 33)
+      assert.equal(event._latestTime, 10 + 33)
       assert.equal(event._earliestTime, 10 - 2)
 
       event.tolerance({early: 4, late: 11})
       assert.equal(event.deadline, 10)
       assert.equal(event.toleranceLate, 11)
       assert.equal(event.toleranceEarly, 4)
-      assert.equal(event._expireTime, 10 + 11)
+      assert.equal(event._latestTime, 10 + 11)
       assert.equal(event._earliestTime, 10 - 4)
     })
 
@@ -178,8 +180,8 @@ describe('timeStretch', function() {
     ratio = 1/4
     waaClock.timeStretch([event1, event2, event3], ratio)
     assert.deepEqual(eToObj1(event1), {deadline: 4.1, repeat: 0.5})
-    assert.deepEqual(eToObj1(event2), {deadline: 4.1 + (0.6 * ratio), repeat: 0.5})
-    assert.deepEqual(eToObj1(event3), {deadline: 4.1 + (1.2 * ratio), repeat: 0.5})
+    assert.deepEqual(eToObj1(event2), {deadline: round(4.1 + (0.6 * ratio)), repeat: 0.5})
+    assert.deepEqual(eToObj1(event3), {deadline: round(4.1 + (1.2 * ratio)), repeat: 0.5})
   })
 
   it('should stretch rightly events with different repeat', function() {
@@ -201,23 +203,6 @@ describe('timeStretch', function() {
     assert.deepEqual(eToObj1(event3), {deadline: 2, repeat: 2})
   })
 
-  it('should work also if the event is very close', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , cb = function() {}
-      , event1, event2, event3, ratio
-    event1 = waaClock.callbackAtTime(cb, 1).repeat(2)
-    event2 = waaClock.callbackAtTime(cb, 2).repeat(2)
-
-    assert.deepEqual(eToObj1(event1), {deadline: 1, repeat: 2})
-    assert.deepEqual(eToObj1(event2), {deadline: 2, repeat: 2})
-
-    ratio = 1/2
-    dummyContext.currentTime = 1
-    waaClock.timeStretch([event1, event2], ratio)
-    assert.deepEqual(eToObj1(event1), {deadline: 2, repeat: 1})
-    assert.deepEqual(eToObj1(event2), {deadline: 1.5, repeat: 1})
-  })
-
   it('should stretch rightly with events that do not repeat', function() {
     var waaClock = new WAAClock(dummyContext)
       , cb = function() {}
@@ -236,6 +221,29 @@ describe('timeStretch', function() {
     assert.deepEqual(eToObj1(event2), {deadline: 3.10/2, repeat: 0.5})
     assert.deepEqual(eToObj1(event3), {deadline: 3.8/2, repeat: null})
   })
+
+  it('should stretch rightly events for which current time is past (deadline - early)', function() {
+    var waaClock = new WAAClock(dummyContext)
+      , cb = function() {}
+      , event1, event2, event3, ratio
+    // Event just reached earliestTime
+    event1 = waaClock.callbackAtTime(cb, 1).repeat(2).tolerance({ early: 0.1 })
+    event2 = waaClock.callbackAtTime(cb, 2).repeat(2).tolerance({ early: 0.01 })
+    event3 = waaClock.callbackAtTime(cb, 0).repeat(0.3).tolerance({ early: 0.01 })
+
+    assert.deepEqual(eToObj1(event1), {deadline: 1, repeat: 2})
+    assert.deepEqual(eToObj1(event2), {deadline: 2, repeat: 2})
+    assert.deepEqual(eToObj1(event3), {deadline: 0, repeat: 0.3})
+
+    ratio = 1/2
+    dummyContext.currentTime = 0.9
+    waaClock.timeStretch([event1, event2, event3], ratio)
+    assert.deepEqual(eToObj1(event2), {deadline: 1.45, repeat: 1}) // Tref is event2.deadline so 2 - 1.1 / 2
+    assert.deepEqual(eToObj1(event1), {deadline: 1.45 + (1 - 2) * ratio + (1 * ratio) * 2, repeat: 1}) // Stretched from Tref, moved to next possible occurence
+    assert.deepEqual(eToObj1(event3), {deadline: round(1.45 + (0 - 2) * ratio + (0.3 * ratio) * 4), repeat: 0.15}) // Stretched from Tref, moved to next possible occurence
+  })
+
+  // TODO : calling from timeStretch from event handler!?
 
 })
 
