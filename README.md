@@ -153,6 +153,11 @@ Released under MIT license
 Change log
 -----------
 
+###0.4.1
+
+- removed support for prefixed AudioContext
+- removed underscore dependency
+
 ###0.4.0
 
 - made `WAAClock.start` method public, and `start` needs to be called explicitely
