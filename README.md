@@ -57,6 +57,30 @@ clock.start()
 
 For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/demos/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/demos/beatSequence.html).
 
+
+More infos about scheduling
+----------------------------
+
+`WAAClock` implements what is explained in Chris Wilson's article [A Tale of Two Clocks](http://www.html5rocks.com/en/tutorials/audio/scheduling/) providing it as a reusable library and adding extra control and features.
+
+In short, scheduling functions provided by `WAAClock` merely execute your callback slightly before the given deadline, so you would have time to schedule things exactly using Web Audio API primitives. For example :
+
+```
+var osc = audioContext.createOscillator()
+osc.connect(audioContext.destination)
+
+var startEvent = clock.callbackAtTime(function(event) {
+  osc.start(event.deadline)
+}, 100)
+```
+
+Each event created with `WAAClock` has a tolerance zone `[deadline - early, deadline + late]` in which it must be executed. The event is executed as soon as the clock enters this tolerance zone.
+On the other hand, if the event hasn't been executed when the clock gets out of the tolerance zone, the event will be dropped (but in practice this shouldn't happen).
+
+You can change the tolerance of an event by calling [Event.tolerance](#tolerancelate-early), but be wise about it : a too tight upper bound `late`, and the event could be dropped abusively, 
+a too loose lower bound `early`, and the event will be executed too early.
+
+
 API
 ----
 
@@ -64,49 +88,49 @@ API
 
 `WAAClock` handles all the scheduling work. It is the only object you need to create directly.
 
-Because Web Audio API events cannot be cancelled, `WAAClock` simply queues all events, and schedules them only at the last moment.
-In fact, each event has a tolerance zone *[t1, t2]* in which it should be executed.
-Each event is scheduled as soon as the clock enters its tolerance zone.
-On the other hand, if the event hasn't been scheduled when the clock gets out of the tolerance zone, the event will be dropped.
-Once the event has been scheduled, it cannot be cancelled anymore, and **will** be executed.
-Therefore, you should set the tolerance wisely : a too tight upper bound (`lateTolerance`), and the event can be dropped abusively, 
-a too loose lower bound (`earlyTolerance`), and the event will be scheduled too early.
+You can set the default tolerance of events with the options `lateTolerance` and `earlyTolerance`.
 
-You can set the default tolerance with the options `lateTolerance` and `earlyTolerance`.
-You can also set the tolerance on a "per-event" basis, by calling the `tolerance` method of the event.
 
 ###start()
 
 Starts the clock.
 
+
 ###stop()
 
 Stops the clock.
+
 
 ###callbackAtTime(func, deadline)
 
 Schedules `func` to run before `deadline` in seconds, and returns an `Event` object.
 
+
 ###setTimeout(func, delay)
 
 Schedules `func` to run after `delay` seconds, and returns an `Event` object.
+
 
 ###timeStretch(events, ratio)
 
 Stretch time and repeat time of `events` by `ratio`, keeping their relative distance.
 In fact this is equivalent to changing the tempo.
 
+
 ##Event
 
 Every scheduling method returns an event object. All methods from `Event` return the calling event, so that you can chain them.
+
 
 ###deadline
 
 The deadline of the event.
 
+
 ###schedule(deadline)
 
 Reschedule the deadline of an event, `deadline` is the absolute time as given by `context.currentTime`.
+
 
 ###tolerance(values)
 
@@ -124,9 +148,11 @@ var clock.callbackAtTime(cb, 11)
 
 Sets the event to repeat every `time` seconds.  If you want to remove the repeat you can pass `null`. Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
 
+
 ###clear()
 
 Cancels the event execution. This will work only if the event hasn't been scheduled yet (see WAAClock for more infos).
+
 
 ### Event: 'executed'
 
