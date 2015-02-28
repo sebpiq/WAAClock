@@ -20,6 +20,7 @@
 <b>note :</b> you can change the tempo and the signature. For example go to <a href="?tempo=300&signature=7">?tempo=300&signature=7</a> to have 7 beats played at tempo 300.
   </div> 
 
+  <button id="startButton">Start</button>
   <table id="pattern">
     <tr data-track="hihat"></tr>
     <tr data-track="snare"></tr>
@@ -43,27 +44,31 @@
   <script>
     $('#signature').html(signature)
     $('#tempo').html(tempo)
-    $('#pattern tr').each(function() {
-      var track = $(this)
-        , trackName = track.data('track')
-      loadTrack(trackName)
-      beats[trackName] = {}
-      for (var beatInd = 0; beatInd < signature; beatInd++) {
-        var td = $('<td class="'+beatInd+'"><div class="beat"></div></td>')
-        td.appendTo(track)
-        td.find('.beat').click(function(beatInd) {
-          return function() {
-            var beat = $(this)
-            if (!beat.hasClass('active')) {
-              beat.addClass('active')
-              startBeat(trackName, beatInd)
-            } else {
-              beat.removeClass('active')
-              stopBeat(trackName, beatInd)
+
+    $('#startButton').click(function() {
+      $('#startButton').hide()
+      $('#pattern tr').each(function() {
+        var track = $(this)
+          , trackName = track.data('track')
+        loadTrack(trackName)
+        beats[trackName] = {}
+        for (var beatInd = 0; beatInd < signature; beatInd++) {
+          var td = $('<td class="'+beatInd+'"><div class="beat"></div></td>')
+          td.appendTo(track)
+          td.find('.beat').click(function(beatInd) {
+            return function() {
+              var beat = $(this)
+              if (!beat.hasClass('active')) {
+                beat.addClass('active')
+                startBeat(trackName, beatInd)
+              } else {
+                beat.removeClass('active')
+                stopBeat(trackName, beatInd)
+              }
             }
-          }
-        }(beatInd))
-      }
+          }(beatInd))
+        }
+      })
     })
   </script>
 

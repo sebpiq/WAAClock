@@ -26,3 +26,8 @@ h1 {
 #description {
   padding: 1em 0;
 }
+
+#startButton {
+  padding: 1em 2em;
+  font-size: 150%;
+}

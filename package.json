@@ -15,7 +15,7 @@
     "music"
   ],
   "dependencies": {
-    "setimmediate": "^1.0.2"
+    "setimmediate": "x"
   },
   "devDependencies": {
     "browserify": "2.22.x",

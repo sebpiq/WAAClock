@@ -1,19 +1,23 @@
 if (!window.AudioContext) alert('you browser doesnt support Web Audio API')
 
-var context = new AudioContext()
-  , soundBank = {}
+var soundBank = {}
   , beats = {}
   , tempo = QUERY.tempo || 120
   , signature = QUERY.signature || 4
   , beatDur = 60/tempo
   , barDur = signature * beatDur
-  , clock = new WAAClock(context, {toleranceEarly: 0.1})
-clock.start()
+  , clock, context, uiEvent
 
-// The following code highlights the current beat in the UI by calling the function `uiNextBeat` periodically.
-var event = clock.callbackAtTime(uiNextBeat, 0)
-  .repeat(beatDur)
-  .tolerance({late: 100})
+$('#startButton').click(function() {
+  context = new AudioContext()
+  clock = new WAAClock(context, {toleranceEarly: 0.1})
+  clock.start()
+
+  // The following code highlights the current beat in the UI by calling the function `uiNextBeat` periodically.
+  uiEvent = clock.callbackAtTime(uiNextBeat, 0)
+    .repeat(beatDur)
+    .tolerance({late: 100})
+})
 
 // This function activates the beat `beatInd` of `track`.
 var startBeat = function(track, beatInd) {
