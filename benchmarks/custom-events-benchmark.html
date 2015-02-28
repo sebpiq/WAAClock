@@ -1,0 +1,90 @@
+ <!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+</head>
+
+<body>
+  <div>
+    This benchmark compare different methods for scheduling custom events. Open the console to see the results.
+  </div>
+
+  <script>
+    var DELAY = 500
+      , STOP = 40000
+      , stats = {
+        1: {
+          title: 'ScriptProcessorNode',
+          counter: 1,
+          diffs: [],
+          start: 0
+        },
+        2: {
+          title: 'setInterval',
+          counter: 1,
+          diffs: [],
+          start: null
+        }
+      }
+
+    var context = new webkitAudioContext()
+
+    var timeDiff = function(ind) {
+      var stat = stats[ind]
+        , expected = stat.start + stat.counter * DELAY
+      stat.diffs.push(Math.abs(expected - context.currentTime * 1000))
+      stat.counter += 1
+    }
+
+    // --------- METHOD 1, using a ScriptProcessorNode
+    var bufferSize = 256
+      , node = context.createJavaScriptNode(bufferSize, 1, 1)
+      , precision = 0.5 * 1000 * bufferSize / context.sampleRate
+    precision = precision + precision * 0.1 // To protect from edges
+
+    node.connect(context.destination)
+    node.onaudioprocess = function () {
+      if (Math.abs(stats[1].counter * DELAY - context.currentTime * 1000) < precision)
+        setTimeout(function() { timeDiff(1) }, 0)
+    }
+
+    // --------- METHOD 2, using setInterval
+    var intId
+    setTimeout(function() {
+      stats[2].start = context.currentTime * 1000
+      intId = setInterval(function() { timeDiff(2) }, DELAY)
+    }, 400)
+
+
+    // ------- END
+    setTimeout(function() {
+      var couldHaveRan = Math.floor((context.currentTime * 1000) / DELAY)
+      clearInterval(intId)
+      node.disconnect(context.destination)
+
+      console.log('TIME ELAPSED (ms)', context.currentTime * 1000)
+      console.log('')
+
+      var printStats = function(ind) {
+        var count = stats[ind].counter - 1
+          , diffs = stats[ind].diffs
+          , avg = diffs.reduce(function(tot, val) { return val + tot }, 0) / count
+          , variance = diffs.reduce(function(tot, val) { return Math.pow(val - avg, 2) }, 0) / count
+
+        console.log('------------------ ' + stats[ind].title + ' ------------------')
+        console.log('RAN', count)
+        console.log('DROPPED', couldHaveRan - count)
+        console.log('AVERAGE DIFF (ms)', avg)
+        console.log('VARIANCE', variance)
+        console.log('')
+      } 
+
+      printStats(1)
+      printStats(2)
+      console.log('-----------------------------------------------')
+      console.log(stats)
+    }, STOP)
+  </script>
+</body>
+
+</html> 
