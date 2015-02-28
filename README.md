@@ -1,9 +1,12 @@
 WAAClock.js
 =============
 
-Web Audio API doesn't provide a comprehensive API for scheduling things in the time. For example, it is hard or impossible to cancel events once they have been scheduled ; there is no way to schedule a custom event ; there is no way to schedule repeating events ; or change tempo.
+`WAAClock` is a small library to help you schedule things in time with Web Audio API.
 
-`WAAClock(audioContext)` adds a very thin layer allowing you to play with the time in a more easy way.
+```
+var clock = WAAClock(audioContext)
+clock.start()
+```
 
 **Schedule custom events**
 
@@ -41,29 +44,27 @@ clock.setTimeout(function() {
 }, 10)
 ```
 
-**note :** this library uses current web audio API specification. Some older browsers still use prefixed / deprecated function names. You can use [Chris Wilson's AudioContext-MonkeyPatch](https://github.com/cwilso/AudioContext-MonkeyPatch) if you want to support those older browsers as well.
+**note :** this library uses current Web Audio API specification. Some older browsers still use prefixed / deprecated function names. You can use [Chris Wilson's AudioContext-MonkeyPatch](https://github.com/cwilso/AudioContext-MonkeyPatch) if you want to support those older browsers as well.
 
 
-Getting started and examples
------------------------------
+Downloads
+------------
 
-First download the latest stable release of `WAAClock` from [dist/](https://github.com/sebpiq/WAAClock/tree/master/dist), then create an `AudioContext` and a `WAAClock` :
+You can download the latest stable release of `WAAClock` from [dist/](https://github.com/sebpiq/WAAClock/tree/master/dist).
 
-```javascript
-var context = window.AudioContext ? new AudioContext() : new webkitAudioContext()
-  , clock = new WAAClock(context)
-clock.start()
-```
+Examples
+----------
 
-For complete examples, check-out this [simple repetitive pattern](http://sebpiq.github.io/WAAClock/demos/tempoChange.html) or a [basic sequencer](http://sebpiq.github.io/WAAClock/demos/beatSequence.html).
+- [tempo change](http://sebpiq.github.io/WAAClock/demos/tempoChange.html)
+- [basic drum machine](http://sebpiq.github.io/WAAClock/demos/beatSequence.html).
 
 
 More infos about scheduling
 ----------------------------
 
-`WAAClock` implements what is explained in Chris Wilson's article [A Tale of Two Clocks](http://www.html5rocks.com/en/tutorials/audio/scheduling/) providing it as a reusable library and adding extra control and features.
+`WAAClock` implements the technique explained in Chris Wilson's article [A Tale of Two Clocks](http://www.html5rocks.com/en/tutorials/audio/scheduling/) providing it as a reusable library and adding extra control and features.
 
-In short, scheduling functions provided by `WAAClock` merely execute your callback slightly before the given deadline, so you would have time to schedule things exactly using Web Audio API primitives. For example :
+In short, `WAAClock` merely executes your callback slightly before the given deadline, so you would have time to schedule things exactly using Web Audio API primitives. For example :
 
 ```
 var osc = audioContext.createOscillator()
