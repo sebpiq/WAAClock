@@ -108,9 +108,17 @@ The time at which the event is scheduled.
 
 Reschedule an event, `time` is the absolute time as given by `context.currentTime`.
 
-###tolerance(late, early)
+###tolerance(values)
 
-Sets the event's tolerance. See `WAAClock` for a detailed explanation.
+Sets the event's tolerance, `values` is on object that can have keys `late` and `early`. See `WAAClock` for a detailed explanation. Example :
+
+```javascript
+// The following executes `cb` before time 11. However, `cb` can be executed as early as
+// time 10.9, and if something happends that prevent the event to be executed early enough,
+// after time 12 the event will be dropped.
+var clock.callbackAtTime(cb, 11)
+  .tolerance({ early: 0.1, late: 1 })
+```
 
 ###repeat(time)
 
@@ -145,6 +153,13 @@ Running the tests
 Tests are written with mocha. Just install mocha globally and run `mocha` from the root directory.
 Integration with `node-web-audio-api` is tested manually running `node test/node-web-audio-api-test.js`.
 
+
+Building
+----------
+
+Build with browserify to `dist/WAAClock-latest.js` by running `npm run build`.
+
+
 License
 --------
 
@@ -153,10 +168,11 @@ Released under MIT license
 Change log
 -----------
 
-###0.4.1
+###0.5.0
 
 - removed support for prefixed AudioContext
 - removed underscore dependency
+- changed `Event.tolerance` API
 
 ###0.4.0
 
