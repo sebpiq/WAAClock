@@ -14,7 +14,7 @@ $('#startButton').click(function() {
   clock.start()
 
   // The following code highlights the current beat in the UI by calling the function `uiNextBeat` periodically.
-  uiEvent = clock.callbackAtTime(uiNextBeat, 0)
+  uiEvent = clock.callbackAtTime(uiNextBeat, nextBeatTime(0))
     .repeat(beatDur)
     .tolerance({late: 100})
 })

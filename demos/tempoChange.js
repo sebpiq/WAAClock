@@ -6,7 +6,7 @@ var currentTempo = 60
 
 // To change the tempo, we use the function `Clock.timeStretch`.
 var setTempo = function(newTempo) {
-  clock.timeStretch([freqEvent1, freqEvent2], currentTempo / newTempo)
+  clock.timeStretch(context.currentTime, [freqEvent1, freqEvent2], currentTempo / newTempo)
   currentTempo = newTempo
 }
 

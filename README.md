@@ -40,7 +40,7 @@ var event1 = clock.callbackAtTime(function() { console.log('wow!') }, 1).repeat(
 
 // in 10 seconds, the tempo will be multiplied by 2
 clock.setTimeout(function() {
-  clock.timeStretch([event1, event2], 0.5)
+  clock.timeStretch(context.currentTime, [event1, event2], 0.5)
 }, 10)
 ```
 
@@ -112,9 +112,9 @@ Schedules `func` to run before `deadline` in seconds, and returns an `Event` obj
 Schedules `func` to run after `delay` seconds, and returns an `Event` object.
 
 
-###timeStretch(events, ratio)
+###timeStretch(tRef, events, ratio)
 
-Stretch time and repeat time of `events` by `ratio`, keeping their relative distance.
+Stretch time and repeat time of `events` by `ratio`, keeping their relative distance, and taking `tRef` as a reference .
 In fact this is equivalent to changing the tempo.
 
 

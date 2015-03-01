@@ -611,18 +611,22 @@ var EventEmitter = require('events').EventEmitter
 if (isBrowser && !AudioContext)
   throw new Error('This browser doesn\'t seem to support web audio API')
 
+var CLOCK_DEFAULTS = {
+  toleranceLate: 0.10,
+  toleranceEarly: 0.001
+}
 
 // ==================== Event ==================== //
 var Event = function(clock, deadline, func) {
   this.clock = clock
   this.func = func
   this.repeatTime = null
-  this.toleranceLate = 0.010
-  this.toleranceEarly = 0.010
-  this._expireTime = null
+  this.toleranceLate = CLOCK_DEFAULTS.toleranceLate
+  this.toleranceEarly = CLOCK_DEFAULTS.toleranceEarly
+  this._armed = false
+  this._latestTime = null
   this._earliestTime = null
-  this.deadline = deadline
-  this._update()
+  this.schedule(deadline)
 }
 inherits(Event, EventEmitter)
 
@@ -658,29 +662,41 @@ Event.prototype.isRepeated = function() { return this.repeatTime !== null }
 // Schedules the event to be ran before `deadline`.
 // If the time is within the event tolerance, we handle the event immediately
 Event.prototype.schedule = function(deadline) {
+  this._armed = true
   this.deadline = deadline
   this._update()
   if (this.clock.context.currentTime >= this._earliestTime) {
     this.clock._removeEvent(this)
-    this.clock._handleEvent(this)
+    this._execute()
   }
+}
+
+// Executes the event
+Event.prototype._execute = function() {
+  this._armed = false
+  if (this.clock.context.currentTime < this._latestTime) {
+    this.func(this)
+    this.emit('executed')
+  } else {
+    this.emit('expired')
+    console.warn('event expired')
+  }
+  // In the case `schedule` is called inside `func`, we need to avoid
+  // overrwriting with yet another `schedule` 
+  if (this._armed === false && this.isRepeated())
+    this.schedule(this.deadline + this.repeatTime) 
 }
 
 // This recalculates some cached values and re-insert the event in the clock's list
 // to maintain order.
 Event.prototype._update = function() {
-  this._expireTime = this.deadline + this.toleranceLate
+  this._latestTime = this.deadline + this.toleranceLate
   this._earliestTime = this.deadline - this.toleranceEarly
   this.clock._removeEvent(this)
   this.clock._insertEvent(this)
 }
 
 // ==================== WAAClock ==================== //
-var CLOCK_DEFAULTS = {
-  toleranceLate: 0.10,
-  toleranceEarly: 0.001
-}
-
 var WAAClock = module.exports = function(context, opts) {
   var self = this
   opts = opts || {}
@@ -703,13 +719,26 @@ WAAClock.prototype.callbackAtTime = function(func, deadline) {
 }
 
 // Stretches `deadline` and `repeat` of all scheduled `events` by `ratio`, keeping
-// their relative distance. In fact this is equivalent to changing the tempo.
-WAAClock.prototype.timeStretch = function(events, ratio) {
-  var tRef1 = Math.min.apply(Math, events.map(function(event) { return event.deadline }))
-    , tRef2 = this._absTime(ratio * this._relTime(tRef1))
+// their relative distance to `tRef`. In fact this is equivalent to changing the tempo.
+WAAClock.prototype.timeStretch = function(tRef, events, ratio) {
+  var self = this
+    , currentTime = self.context.currentTime
+
   events.forEach(function(event) {
     if (event.isRepeated()) event.repeat(event.repeatTime * ratio)
-    event.schedule(tRef2 + ratio * (event.deadline - tRef1))
+
+    var deadline = tRef + ratio * (event.deadline - tRef)    
+    // Otherwise, if the deadline is too close or past, and the event has a repeat,
+    // we execute the callback right away, and calculate the next repeat possible
+    // in the stretched space.
+    if (event.isRepeated()) {
+      while (currentTime >= deadline - event.toleranceEarly)
+        deadline += event.repeatTime
+      event.schedule(deadline)
+    
+    } else event.schedule(deadline)
+    
+
   })
   return events
 }
@@ -747,25 +776,12 @@ WAAClock.prototype._tick = function() {
   var event = this._events.shift()
 
   while(event && event._earliestTime <= this.context.currentTime) {
-    this._handleEvent(event)
+    event._execute()
     event = this._events.shift()
   }
 
   // Put back the last event
   if(event) this._events.unshift(event)
-}
-
-// Handles an event
-WAAClock.prototype._handleEvent = function(event) {
-  if (this.context.currentTime < event._expireTime) {
-    event.func(event)
-    event.emit('executed')
-  } else {
-    event.emit('expired')
-    console.warn('event expired')
-  }
-  if (event.isRepeated())
-    event.schedule(event.deadline + event.repeatTime)
 }
 
 // Creates an event and insert it to the list
