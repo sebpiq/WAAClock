@@ -14,9 +14,7 @@
     "sound",
     "music"
   ],
-  "dependencies": {
-    "setimmediate": "x"
-  },
+  "dependencies": {},
   "devDependencies": {
     "browserify": "2.22.x",
     "mocha": "1.11.x",

@@ -27,20 +27,6 @@ var dummyContext = {
 
 describe('Event', function() {
 
-  it('should be an EventEmitter', function() {
-    var waaClock = new WAAClock(dummyContext)
-      , event = waaClock._createEvent(function(){}, 5)
-      , called = []
-      , cb = function() { called.push('bla') }
-    event.on('bla', cb)
-    assert.deepEqual(called, [])
-    event.emit('bla')
-    assert.deepEqual(called, ['bla'])
-    event.removeListener('bla', cb)
-    event.emit('bla')
-    assert.deepEqual(called, ['bla'])
-  })
-
   describe('tolerance', function() {
 
     it('should get the default tolerance', function() {
@@ -347,34 +333,15 @@ describe('_tick', function() {
     dummyContext.currentTime += 1
   })
 
-  it('should emit \'executed\'', function() {
-    var called = []
-      , waaClock = new WAAClock(dummyContext, {toleranceEarly: 2.5})
-      , event1 = waaClock._createEvent(function() {}, 3)
-      , event2 = waaClock._createEvent(function() {}, 1.2)
-    event1.on('executed', function() { called.push('1-ok') })
-    event2.on('executed', function() { called.push('2-ok') })
-
-    // t=0 / look ahead=2.5
-    waaClock._tick()
-    assert.deepEqual(called, ['2-ok'])
-    dummyContext.currentTime += 1
-
-    // t=1 / look ahead=3.5
-    waaClock._tick()
-    assert.deepEqual(called, ['2-ok', '1-ok'])
-    
-  })
-
   it('should forget expired events and emit \'expired\'', function() {
     var called = []
       , waaClock = new WAAClock(dummyContext, {lookAheadTime: 1, tickTime: 1})
       , event1 = waaClock._createEvent(function() { called.push('1-ok') }, 2).tolerance({late: 0.1})
       , event2 = waaClock._createEvent(function() { called.push('2-ok') }, 5).tolerance({late: 0.1})
       , event3 = waaClock._createEvent(function() { called.push('3-ok') }, 7).tolerance({late: 0.1})
-    event1.on('expired', function() { called.push('1-exp') })
-    event2.on('expired', function() { called.push('2-exp') })
-    event3.on('expired', function() { called.push('3-exp') })
+    event1.onexpired = function() { called.push('1-exp') }
+    event2.onexpired = function() { called.push('2-exp') }
+    event3.onexpired = function() { called.push('3-exp') }
 
     dummyContext.currentTime = 2.1
     // t=2.1 / look ahead=3.1

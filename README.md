@@ -155,22 +155,13 @@ Sets the event to repeat every `time` seconds.  If you want to remove the repeat
 Cancels the event execution. This will work only if the event hasn't been scheduled yet (see WAAClock for more infos).
 
 
-### Event: 'executed'
-
-This message is emitted when the event has been executed. You can listen to it by calling `on` :
-
-```javascript
-event.on('executed', function() { console.log('yeaay! :)') })
-```
-
-
 ### Event: 'expired'
 
 This message is emitted when the clock fell out of the event tolerance zone.
 You can listen to it by calling `on` :
 
 ```javascript
-event.on('expired', function() { console.log('oooh :(!') })
+event.onexpired = function(event) { console.log('oooh :(!') }
 ```
 
 
