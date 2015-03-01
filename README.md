@@ -192,6 +192,9 @@ Change log
 - removed underscore dependency
 - changed `Event.tolerance` API
 - renamed `Event.time` to `Event.deadline`
+- added `tRef` argument to `timeStretch`
+- removed `executed` event and EventEmitter
+- `expired` event to callback
 
 ###0.4.0
 
