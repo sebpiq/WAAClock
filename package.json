@@ -21,7 +21,8 @@
     "web-audio-api": "*"
   },
   "scripts": {
-    "build": "browserify index.js > dist/WAAClock-latest.js"
+    "build": "browserify index.js > dist/WAAClock-latest.js",
+    "test": "mocha test/WAAClock-test.js"
   },
   "license": "MIT"
 }
