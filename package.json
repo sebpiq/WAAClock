@@ -1,6 +1,6 @@
 {
   "name": "waaclock",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "A comprehensive event scheduling tool for Web Audio API.",
   "repository": {

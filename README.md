@@ -186,6 +186,10 @@ Released under MIT license
 Change log
 -----------
 
+###0.5.1
+
+- bug fixes.
+
 ###0.5.0
 
 - removed support for prefixed AudioContext

@@ -34,7 +34,6 @@ var startBeat = function(track, beatInd) {
 var stopBeat = function(track, beatInd) {
   var event = beats[track][beatInd]
   event.clear()
-  event.removeAllListeners()
 }
 
 // ---------- Just some helpers ---------- //
