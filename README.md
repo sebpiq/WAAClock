@@ -89,7 +89,7 @@ API
 
 `WAAClock` handles all the scheduling work. It is the only object you need to create directly.
 
-You can set the default tolerance of events with the options `lateTolerance` and `earlyTolerance`.
+You can set the default tolerance of events with the options `toleranceLate` and `toleranceEarly`.
 
 
 ###start()
