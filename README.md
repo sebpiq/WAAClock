@@ -4,7 +4,7 @@ WAAClock.js
 `WAAClock` is a small library to help you schedule things in time with Web Audio API.
 
 ```
-var clock = WAAClock(audioContext)
+var clock = new WAAClock(audioContext)
 clock.start()
 ```
 
