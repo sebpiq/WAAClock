@@ -94,7 +94,7 @@ You can set the default tolerance of events with the options `toleranceLate` and
 
 ###start()
 
-Starts the clock.
+Starts the clock. This will also erase all the events that were previously scheduled.
 
 
 ###stop()
@@ -185,6 +185,11 @@ Released under MIT license
 
 Change log
 -----------
+
+###0.5.2
+
+- bug fixes.
+
 
 ###0.5.1
 

@@ -36,14 +36,14 @@ describe('Event', function() {
   describe('tolerance', function() {
 
     it('should get the default tolerance', function() {
-      var waaClock = new WAAClock(dummyContext, {tolerance: {early: 11, late: 22}})
+      var waaClock = new WAAClock(dummyContext, {tolerance: {early: 11, late: 22}, tickMethod: 'manual'})
         , event = waaClock._createEvent(function(){}, 5)
       assert.equal(event.toleranceLate, waaClock.toleranceLate)
       assert.equal(event.toleranceEarly, waaClock.toleranceEarly)
     })
 
     it('shouldn\'t change the tolerance if value not provided', function() {
-      var waaClock = new WAAClock(dummyContext, {tolerance: {early: 11, late: 22}})
+      var waaClock = new WAAClock(dummyContext, {tolerance: {early: 11, late: 22}, tickMethod: 'manual'})
         , event = waaClock._createEvent(function(){}, 5)
       assert.equal(event.toleranceLate, waaClock.toleranceLate)
       assert.equal(event.toleranceEarly, waaClock.toleranceEarly)
@@ -58,7 +58,7 @@ describe('Event', function() {
     })
 
     it('should update cached values', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , event = waaClock._createEvent(function(){}, 5).tolerance({early: 2, late: 33})
 
       assert.equal(event.deadline, 5)
@@ -87,7 +87,7 @@ describe('Event', function() {
   describe('schedule', function() {
 
     it('should set time and update the list of events', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , event1 = waaClock._createEvent(function() {}, 1)
         , event2 = waaClock._createEvent(function() {}, 0.5)
         , event3 = waaClock._createEvent(function() {}, 2)
@@ -104,11 +104,25 @@ describe('Event', function() {
         [ {deadline: 0.2, repeat: null}, {deadline: 1, repeat: null}, {deadline: 1.234, repeat: null} ])
     })
 
-    // Test for a bug fix
-    it('should not reschedule the event when immediately executed', function() {
-      var waaClock = new WAAClock(dummyContext)
+    it('should execute the event straight away if deadline is now and only if clock is started', function() {
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , executed = 0
         , event
+
+      event = waaClock._createEvent(function() { executed++ }, 0)
+      assert.equal(executed, 0)
+
+      waaClock.start()
+      event = waaClock._createEvent(function() { executed++ }, 0)
+      assert.equal(executed, 1)
+    })
+
+    // Test for a bug fix
+    it('should not reschedule the event when immediately executed', function() {
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
+        , executed = 0
+        , event
+      waaClock.start()
 
       event = waaClock.setTimeout(function() { executed++ }, 0) // Executed immediately
       assert.equal(executed, 1)
@@ -116,7 +130,7 @@ describe('Event', function() {
     })
 
     it('should schedule repeats even if the event is executed immediately', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , event
 
       event = waaClock.setTimeout(function() {}, 0) // Executed immediately
@@ -129,7 +143,7 @@ describe('Event', function() {
   describe('repeat', function() {
 
     it('should set event\'s repeat', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , event = waaClock._createEvent(function() {}, 1)
       event.repeat(1.234)
 
@@ -141,7 +155,7 @@ describe('Event', function() {
   describe('clear', function() {
 
     it('should remove event when calling clear', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , event = waaClock._createEvent(function() {}, 1000)
       assert.deepEqual(waaClock._events, [event])
       event.clear()
@@ -149,8 +163,10 @@ describe('Event', function() {
     })
 
     it('should work if calling clear inside a callback', function() {
-      var waaClock = new WAAClock(dummyContext)
-        , called = false
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
+      waaClock.start()
+      
+      var called = false
         , event = waaClock._createEvent(function() {
           called = true
           event.clear()
@@ -158,6 +174,7 @@ describe('Event', function() {
 
       event.repeat(1)
       dummyContext.currentTime = 1
+      
       waaClock._tick()
       assert.equal(called, true)
       assert.deepEqual(waaClock._events.length, 0)
@@ -178,7 +195,7 @@ describe('WAAClock', function() {
   describe('timeStretch', function() {
 
     it('should stretch rightly events with the same interval', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , cb = function() {}
         , event1, event2, event3, ratio
       dummyContext.currentTime = 2.4
@@ -202,7 +219,7 @@ describe('WAAClock', function() {
     })
 
     it('should stretch rightly events with different repeat', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , cb = function() {}
         , event1, event2, event3, ratio
       event1 = waaClock.setTimeout(cb, 2).repeat(2)
@@ -221,7 +238,7 @@ describe('WAAClock', function() {
     })
 
     it('should stretch rightly with events that do not repeat', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , cb = function() {}
         , event1, event2, event3, ratio
       event1 = waaClock.setTimeout(cb, 1.76)
@@ -241,7 +258,7 @@ describe('WAAClock', function() {
     })
 
     it('should stretch rightly events for which current time is past (deadline - early)', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , called = []
         , cb = function(event) { called.push(event.deadline) }
         , event1, event2, event3, event4, ratio
@@ -267,8 +284,10 @@ describe('WAAClock', function() {
     })
 
     it('shouldnt fail if calling stretch from inside callback', function() {
-      var waaClock = new WAAClock(dummyContext)
-        , called = []
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
+      waaClock.start()
+
+      var called = []
         , cb = function(event) {
           called.push(event.deadline)
           waaClock.timeStretch(event1.deadline, [event1], 1/2)
@@ -292,8 +311,10 @@ describe('WAAClock', function() {
   describe('_tick', function() {
 
     it('should execute simple events rightly', function() {
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
+      waaClock.start()
+
       var called = []
-        , waaClock = new WAAClock(dummyContext)
         , cb = function(event) { called.push(round(event.deadline)) }
         , event1 = waaClock._createEvent(cb, 9)
         , event2 = waaClock._createEvent(cb, 3.51)
@@ -329,8 +350,10 @@ describe('WAAClock', function() {
     })
 
     it('should execute repeated events', function() {
+      var waaClock = new WAAClock(dummyContext, {toleranceEarly: 2.5, tickMethod: 'manual'})
+      waaClock.start()
+
       var called = []
-        , waaClock = new WAAClock(dummyContext, {toleranceEarly: 2.5})
         , cb = function(event) { called.push(round(event.deadline)) }
         , event1 = waaClock._createEvent(cb, 3)
         , event2 = waaClock._createEvent(cb, 1.2)
@@ -359,8 +382,10 @@ describe('WAAClock', function() {
     })
 
     it('should forget expired events and emit \'expired\'', function() {
+      var waaClock = new WAAClock(dummyContext, {lookAheadTime: 1, tickTime: 1, tickMethod: 'manual'})
+      waaClock.start()
+
       var called = []
-        , waaClock = new WAAClock(dummyContext, {lookAheadTime: 1, tickTime: 1})
         , event1 = waaClock._createEvent(function() { called.push('1-ok') }, 2).tolerance({late: 0.1})
         , event2 = waaClock._createEvent(function() { called.push('2-ok') }, 5).tolerance({late: 0.1})
         , event3 = waaClock._createEvent(function() { called.push('3-ok') }, 7).tolerance({late: 0.1})
@@ -388,8 +413,10 @@ describe('WAAClock', function() {
     })
 
     it('shouldnt schedule twice if event rescheduled in user callback', function() {
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
+      waaClock.start()
+      
       var called = []
-        , waaClock = new WAAClock(dummyContext)
         , nextDeadlines = [1.5, 1.55, 1.57]
         , cb = function(event) {
           called.push(event.deadline)
@@ -421,7 +448,7 @@ describe('WAAClock', function() {
   describe('_createEvent', function() {
 
     it('should create an event when called', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
         , cb1 = function() {}
         , cb2 = function() {}
         , cb3 = function() {}
@@ -440,7 +467,7 @@ describe('WAAClock', function() {
   describe('_insertEvent', function() {
 
     it('should insert events at the right position', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
       waaClock._events = [{_earliestTime: 2}, {_earliestTime: 3}, {_earliestTime: 7}, {_earliestTime: 11}]
 
       waaClock._insertEvent({_earliestTime: 1})
@@ -465,7 +492,7 @@ describe('WAAClock', function() {
   describe('_removeEvent', function() {
 
     it('should remove events rightly', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
       waaClock._events = [{_earliestTime: 2}, {_earliestTime: 3}, {_earliestTime: 4},
         {_earliestTime: 10.5}, {_earliestTime: 11}]
 
@@ -485,7 +512,7 @@ describe('WAAClock', function() {
   describe('_indexByTime', function() {
     
     it('should find the right index', function() {
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
       waaClock._events = [{_earliestTime: 2}, {_earliestTime: 3}, {_earliestTime: 7}, {_earliestTime: 7},
         {_earliestTime: 7}, {_earliestTime: 11}]
 
@@ -502,7 +529,7 @@ describe('WAAClock', function() {
 
     it('can convert from absolute to relative time', function() {
       dummyContext.currentTime = 1
-      var waaClock = new WAAClock(dummyContext)
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
       assert.equal(waaClock._relTime(2), 1)
       assert.equal(waaClock._relTime(0), -1)
       assert.equal(waaClock._absTime(2), 3)
