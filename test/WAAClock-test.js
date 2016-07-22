@@ -138,6 +138,53 @@ describe('Event', function() {
       assert.equal(waaClock._events.length, 1)
     })
 
+    it('should be able to re-schedule an event that has been cleared before', function() {
+      var waaClock = new WAAClock(dummyContext, {tickMethod: 'manual'})
+        , event
+        , executed = 0
+      waaClock.start()
+
+      event = waaClock.setTimeout(function() { executed++ }, 0.5)
+      event.repeat(1)
+      event.tolerance({early: 0, late: 0.000001})
+
+      // t=0
+      waaClock._tick()
+      assert.equal(executed, 0)
+
+      // t=0.5
+      dummyContext.currentTime = 0.5
+      waaClock._tick()
+      assert.equal(executed, 1)
+
+      // t=1.5
+      dummyContext.currentTime = 1.5
+      waaClock._tick()
+      assert.equal(executed, 2)
+      event.clear()
+
+      // t=2.5
+      dummyContext.currentTime = 2.5
+      waaClock._tick()
+      assert.equal(executed, 2)
+
+      // t = 4
+      event.schedule(4)
+      dummyContext.currentTime = 4
+      waaClock._tick()
+      assert.equal(executed, 3)
+
+      // t = 4.5
+      dummyContext.currentTime = 4.5
+      waaClock._tick()
+      assert.equal(executed, 3)
+
+      // t = 5
+      dummyContext.currentTime = 5
+      waaClock._tick()
+      assert.equal(executed, 4)
+    })
+
   })
 
   describe('repeat', function() {
