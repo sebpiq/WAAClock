@@ -8,7 +8,7 @@ var soundBank = {}
   , barDur = signature * beatDur
   , clock, context, uiEvent
 
-$('#startButton').click(function() {
+startWebAudioOnPress($('#startButton'), function() {
   context = new AudioContext()
   clock = new WAAClock(context, {toleranceEarly: 0.1})
   clock.start()

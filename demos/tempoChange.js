@@ -10,7 +10,7 @@ var setTempo = function(newTempo) {
   currentTempo = newTempo
 }
 
-$('#startButton').click(function() {
+startWebAudioOnPress($('#startButton'), function() {
 
   context = new AudioContext()
   clock = new WAAClock(context)

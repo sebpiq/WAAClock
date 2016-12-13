@@ -13,6 +13,13 @@ $(function() {
   }, 'text')
 })
 
+var startWebAudioOnPress = function(startButton, onPressed) {
+  // starting in iOS9, audio will only be unmuted if the context is created on "touchend".  
+  var is_iOS = /iPad|iPhone|iPod/.test(navigator.platform)
+    , eventType = is_iOS ? 'touchend' : 'click'
+  startButton.on(eventType, onPressed)
+}
+
 // Parsing the query params
 var QUERY = {}
 location.search.slice(1).split('&').forEach(function(el) {
