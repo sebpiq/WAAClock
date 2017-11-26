@@ -85,55 +85,55 @@ a too loose lower bound `early`, and the event will be executed too early.
 API
 ----
 
-##WAAClock(context, opts)
+## WAAClock(context, opts)
 
 `WAAClock` handles all the scheduling work. It is the only object you need to create directly.
 
 You can set the default tolerance of events with the options `toleranceLate` and `toleranceEarly`.
 
 
-###start()
+### start()
 
 Starts the clock. This will also erase all the events that were previously scheduled.
 
 
-###stop()
+### stop()
 
 Stops the clock.
 
 
-###callbackAtTime(func, deadline)
+### callbackAtTime(func, deadline)
 
 Schedules `func` to run before `deadline` in seconds, and returns an `Event` object.
 
 
-###setTimeout(func, delay)
+### setTimeout(func, delay)
 
 Schedules `func` to run after `delay` seconds, and returns an `Event` object.
 
 
-###timeStretch(tRef, events, ratio)
+### timeStretch(tRef, events, ratio)
 
 Stretch time and repeat time of `events` by `ratio`, keeping their relative distance, and taking `tRef` as a reference .
 In fact this is equivalent to changing the tempo.
 
 
-##Event
+## Event
 
 Every scheduling method returns an event object. All methods from `Event` return the calling event, so that you can chain them.
 
 
-###deadline
+### deadline
 
 The deadline of the event.
 
 
-###schedule(deadline)
+### schedule(deadline)
 
 Reschedule the deadline of an event, `deadline` is the absolute time as given by `context.currentTime`.
 
 
-###tolerance(values)
+### tolerance(values)
 
 Sets the event's tolerance, `values` is on object that can have keys `late` and `early`. See `WAAClock` for a detailed explanation. Example :
 
@@ -145,12 +145,12 @@ var clock.callbackAtTime(cb, 11)
   .tolerance({ early: 0.1, late: 1 })
 ```
 
-###repeat(time)
+### repeat(time)
 
 Sets the event to repeat every `time` seconds.  If you want to remove the repeat you can pass `null`. Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
 
 
-###clear()
+### clear()
 
 Cancels the event execution. This will work only if the event hasn't been scheduled yet (see WAAClock for more infos).
 
@@ -186,16 +186,16 @@ Released under MIT license
 Change log
 -----------
 
-###0.5.2
+### 0.5.2
 
 - bug fixes.
 
 
-###0.5.1
+### 0.5.1
 
 - bug fixes.
 
-###0.5.0
+### 0.5.0
 
 - removed support for prefixed AudioContext
 - removed underscore dependency
@@ -205,33 +205,33 @@ Change log
 - removed `executed` event and EventEmitter
 - `expired` event to callback
 
-###0.4.0
+### 0.4.0
 
 - made `WAAClock.start` method public, and `start` needs to be called explicitely
 - `WAAClock.stop` method
 - removed web audio API monkey-patching
 - removed support for old web audio API functions
 
-###0.3.2
+### 0.3.2
 
 - bug fix
 
-###0.3.1
+### 0.3.1
 
 - made `schedule` method of `Event` public.
 
-###0.3.0
+### 0.3.0
 
 - added support for [node-web-audio-api](https://github.com/sebpiq/node-web-audio-api)
 
-###0.2.0
+### 0.2.0
 
 - changed the tick method from `setInterval` to `ScriptProcessorNode`
 - added event's `toleranceEarly` and `toleranceLate`
 - removed clock `tickTime` and `lookAheadTime` options
 - added support for old Web Audio API names
 
-###0.1.2
+### 0.1.2
 
 - added `callbackAtTime`
 - bug fixes
