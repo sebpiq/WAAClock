@@ -186,6 +186,11 @@ Released under MIT license
 Change log
 -----------
 
+### 0.5.3
+
+- bug fixes.
+
+
 ### 0.5.2
 
 - bug fixes.
