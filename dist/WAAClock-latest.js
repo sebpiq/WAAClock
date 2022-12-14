@@ -4,66 +4,8 @@ var WAAClock = require('./lib/WAAClock')
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":2}],3:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-}
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-
-},{}],2:[function(require,module,exports){
-var process=require("__browserify_process");var isBrowser = (typeof window !== 'undefined')
-
-if (isBrowser && !AudioContext)
-  throw new Error('This browser doesn\'t seem to support web audio API')
+},{"./lib/WAAClock":2}],2:[function(require,module,exports){
+var isBrowser = (typeof window !== 'undefined')
 
 var CLOCK_DEFAULTS = {
   toleranceLate: 0.10,
@@ -74,18 +16,22 @@ var CLOCK_DEFAULTS = {
 var Event = function(clock, deadline, func) {
   this.clock = clock
   this.func = func
-  this.repeatTime = null
-  this.toleranceLate = CLOCK_DEFAULTS.toleranceLate
-  this.toleranceEarly = CLOCK_DEFAULTS.toleranceEarly
-  this._armed = false
+  this._cleared = false // Flag used to clear an event inside callback
+
+  this.toleranceLate = clock.toleranceLate
+  this.toleranceEarly = clock.toleranceEarly
   this._latestTime = null
   this._earliestTime = null
+  this.deadline = null
+  this.repeatTime = null
+
   this.schedule(deadline)
 }
 
 // Unschedules the event
 Event.prototype.clear = function() {
   this.clock._removeEvent(this)
+  this._cleared = true
   return this
 }
 
@@ -94,6 +40,8 @@ Event.prototype.repeat = function(time) {
   if (time === 0)
     throw new Error('delay cannot be 0')
   this.repeatTime = time
+  if (!this.clock._hasEvent(this))
+    this.schedule(this.deadline + this.repeatTime)
   return this
 }
 
@@ -105,7 +53,11 @@ Event.prototype.tolerance = function(values) {
     this.toleranceLate = values.late
   if (typeof values.early === 'number')
     this.toleranceEarly = values.early
-  this._update()
+  this._refreshEarlyLateDates()
+  if (this.clock._hasEvent(this)) {
+    this.clock._removeEvent(this)
+    this.clock._insertEvent(this)
+  }
   return this
 }
 
@@ -113,20 +65,42 @@ Event.prototype.tolerance = function(values) {
 Event.prototype.isRepeated = function() { return this.repeatTime !== null }
 
 // Schedules the event to be ran before `deadline`.
-// If the time is within the event tolerance, we handle the event immediately
+// If the time is within the event tolerance, we handle the event immediately.
+// If the event was already scheduled at a different time, it is rescheduled.
 Event.prototype.schedule = function(deadline) {
-  this._armed = true
+  this._cleared = false
   this.deadline = deadline
-  this._update()
+  this._refreshEarlyLateDates()
+
   if (this.clock.context.currentTime >= this._earliestTime) {
-    this.clock._removeEvent(this)
     this._execute()
+  
+  } else if (this.clock._hasEvent(this)) {
+    this.clock._removeEvent(this)
+    this.clock._insertEvent(this)
+  
+  } else this.clock._insertEvent(this)
+}
+
+Event.prototype.timeStretch = function(tRef, ratio) {
+  if (this.isRepeated())
+    this.repeatTime = this.repeatTime * ratio
+
+  var deadline = tRef + ratio * (this.deadline - tRef)
+  // If the deadline is too close or past, and the event has a repeat,
+  // we calculate the next repeat possible in the stretched space.
+  if (this.isRepeated()) {
+    while (this.clock.context.currentTime >= deadline - this.toleranceEarly)
+      deadline += this.repeatTime
   }
+  this.schedule(deadline)
 }
 
 // Executes the event
 Event.prototype._execute = function() {
-  this._armed = false
+  if (this.clock._started === false) return
+  this.clock._removeEvent(this)
+
   if (this.clock.context.currentTime < this._latestTime)
     this.func(this)
   else {
@@ -134,24 +108,22 @@ Event.prototype._execute = function() {
     console.warn('event expired')
   }
   // In the case `schedule` is called inside `func`, we need to avoid
-  // overrwriting with yet another `schedule` 
-  if (this._armed === false && this.isRepeated())
+  // overrwriting with yet another `schedule`.
+  if (!this.clock._hasEvent(this) && this.isRepeated() && !this._cleared)
     this.schedule(this.deadline + this.repeatTime) 
 }
 
-// This recalculates some cached values and re-insert the event in the clock's list
-// to maintain order.
-Event.prototype._update = function() {
+// Updates cached times
+Event.prototype._refreshEarlyLateDates = function() {
   this._latestTime = this.deadline + this.toleranceLate
   this._earliestTime = this.deadline - this.toleranceEarly
-  this.clock._removeEvent(this)
-  this.clock._insertEvent(this)
 }
 
 // ==================== WAAClock ==================== //
 var WAAClock = module.exports = function(context, opts) {
   var self = this
   opts = opts || {}
+  this.tickMethod = opts.tickMethod || 'ScriptProcessorNode'
   this.toleranceEarly = opts.toleranceEarly || CLOCK_DEFAULTS.toleranceEarly
   this.toleranceLate = opts.toleranceLate || CLOCK_DEFAULTS.toleranceLate
   this.context = context
@@ -173,27 +145,9 @@ WAAClock.prototype.callbackAtTime = function(func, deadline) {
 // Stretches `deadline` and `repeat` of all scheduled `events` by `ratio`, keeping
 // their relative distance to `tRef`. In fact this is equivalent to changing the tempo.
 WAAClock.prototype.timeStretch = function(tRef, events, ratio) {
-  var self = this
-    , currentTime = self.context.currentTime
-
-  events.forEach(function(event) {
-    if (event.isRepeated()) event.repeat(event.repeatTime * ratio)
-
-    var deadline = tRef + ratio * (event.deadline - tRef)    
-    // If the deadline is too close or past, and the event has a repeat,
-    // we calculate the next repeat possible in the stretched space.
-    if (event.isRepeated()) {
-      while (currentTime >= deadline - event.toleranceEarly)
-        deadline += event.repeatTime
-    }
-    event.schedule(deadline)
-    
-
-  })
+  events.forEach(function(event) { event.timeStretch(tRef, ratio) })
   return events
 }
-
-// ---------- Private ---------- //
 
 // Removes all scheduled events and starts the clock 
 WAAClock.prototype.start = function() {
@@ -202,13 +156,17 @@ WAAClock.prototype.start = function() {
     this._started = true
     this._events = []
 
-    var bufferSize = 256
-    // We have to keep a reference to the node to avoid garbage collection
-    this._clockNode = this.context.createScriptProcessor(bufferSize, 1, 1)
-    this._clockNode.connect(this.context.destination)
-    this._clockNode.onaudioprocess = function () {
-      process.nextTick(function() { self._tick() })
-    }
+    if (this.tickMethod === 'ScriptProcessorNode') {
+      var bufferSize = 256
+      // We have to keep a reference to the node to avoid garbage collection
+      this._clockNode = this.context.createScriptProcessor(bufferSize, 1, 1)
+      this._clockNode.connect(this.context.destination)
+      this._clockNode.onaudioprocess = function () {
+        setTimeout(function() { self._tick() }, 0)
+      }
+    } else if (this.tickMethod === 'manual') null // _tick is called manually
+
+    else throw new Error('invalid tickMethod ' + this.tickMethod)
   }
 }
 
@@ -219,6 +177,8 @@ WAAClock.prototype.stop = function() {
     this._clockNode.disconnect()
   }  
 }
+
+// ---------- Private ---------- //
 
 // This function is ran periodically, and at each tick it executes
 // events for which `currentTime` is included in their tolerance interval.
@@ -236,9 +196,7 @@ WAAClock.prototype._tick = function() {
 
 // Creates an event and insert it to the list
 WAAClock.prototype._createEvent = function(func, deadline) {
-  var event = new Event(this, deadline, func)
-  event.tolerance({late: this.toleranceLate, early: this.toleranceEarly})
-  return event
+  return new Event(this, deadline, func)
 }
 
 // Inserts an event to the list
@@ -250,6 +208,11 @@ WAAClock.prototype._insertEvent = function(event) {
 WAAClock.prototype._removeEvent = function(event) {
   var ind = this._events.indexOf(event)
   if (ind !== -1) this._events.splice(ind, 1)
+}
+
+// Returns true if `event` is in queue, false otherwise
+WAAClock.prototype._hasEvent = function(event) {
+ return this._events.indexOf(event) !== -1
 }
 
 // Returns the index of the first event whose deadline is >= to `deadline`
@@ -276,5 +239,5 @@ WAAClock.prototype._absTime = function(relTime) {
 WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
-},{"__browserify_process":3}]},{},[1])
+},{}]},{},[1])
 ;
