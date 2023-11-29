@@ -91,6 +91,7 @@ API
 
 You can set the default tolerance of events with the options `toleranceLate` and `toleranceEarly`.
 
+You can also pass a `tickMethod` option of "manual" to disable the built-in ScriptProcessorNode method of triggering scheduled events, and instead call `clock.tick()` yourself on a regular interval. This option can be used in combination with something like [worker-timers](https://github.com/chrisguttandin/worker-timers) to acheive consistent scheduling even when the page is in the background.
 
 ### start()
 
