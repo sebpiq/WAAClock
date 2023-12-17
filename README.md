@@ -3,7 +3,7 @@ WAAClock.js
 
 `WAAClock` is a small library to help you schedule things in time with Web Audio API.
 
-```
+```js
 var clock = new WAAClock(audioContext)
 clock.start()
 ```
@@ -62,11 +62,12 @@ Examples
 More infos about scheduling
 ----------------------------
 
-`WAAClock` implements the technique explained in Chris Wilson's article [A Tale of Two Clocks](http://www.html5rocks.com/en/tutorials/audio/scheduling/) providing it as a reusable library and adding extra control and features.
+`WAAClock` implements the technique explained in Chris Wilson's article [A Tale of Two Clocks](http://www.html5rocks.com/en/tutorials/audio/scheduling/), providing it as a reusable library and adding extra control and features. 
+By default, events are triggered by a combination of `ScriptProcessorNode` and `setTimeout`, but you can also implement a custom `tickMethod` to better control event triggering precision and performance.
 
 In short, `WAAClock` merely executes your callback slightly before the given deadline, so you would have time to schedule things exactly using Web Audio API primitives. For example :
 
-```
+```js
 var osc = audioContext.createOscillator()
 osc.connect(audioContext.destination)
 
@@ -91,6 +92,8 @@ API
 
 You can set the default tolerance of events with the options `toleranceLate` and `toleranceEarly`.
 
+You can also pass a `tickMethod` option of "manual" to disable the built-in `ScriptProcessorNode`
+method of triggering scheduled events, and instead call `clock.tick()` yourself on a regular interval.
 
 ### start()
 
@@ -117,6 +120,26 @@ Schedules `func` to run after `delay` seconds, and returns an `Event` object.
 Stretch time and repeat time of `events` by `ratio`, keeping their relative distance, and taking `tRef` as a reference .
 In fact this is equivalent to changing the tempo.
 
+### tick()
+
+Executes any events that are due since the last `tick()` call. This method does not need to be called unless you are using
+`tickMethod: 'manual'`. If you are, this method must be called regularly during playback to trigger events. For example, to
+use [worker-timers](https://github.com/chrisguttandin/worker-timers) for consistent scheduling when the page is in the background:
+
+```js
+import WAAClock from "waaclock";
+import * as wt from "worker-timers";
+
+const clock = new WAAClock(audioContext, { tickMethod: 'manual' });
+clock.start();
+
+// Event precision is limited by how often clock.tick() is called.
+const interval = wt.setInterval(() => clock.tick(), 10);
+
+// ...later...
+clock.stop()
+wt.clearInterval(interval);
+```
 
 ## Event
 
@@ -147,7 +170,8 @@ var clock.callbackAtTime(cb, 11)
 
 ### repeat(time)
 
-Sets the event to repeat every `time` seconds.  If you want to remove the repeat you can pass `null`. Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
+Sets the event to repeat every `time` seconds.  If you want to remove the repeat you can pass `null`. 
+Note that even if an event is dropped because it expired, subsequent "repeats" of the event will still be executed.
 
 
 ### clear()
