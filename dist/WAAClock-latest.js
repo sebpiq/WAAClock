@@ -162,9 +162,9 @@ WAAClock.prototype.start = function() {
       this._clockNode = this.context.createScriptProcessor(bufferSize, 1, 1)
       this._clockNode.connect(this.context.destination)
       this._clockNode.onaudioprocess = function () {
-        setTimeout(function() { self._tick() }, 0)
+        setTimeout(function() { self.tick() }, 0)
       }
-    } else if (this.tickMethod === 'manual') null // _tick is called manually
+    } else if (this.tickMethod === 'manual') null // tick is called manually
 
     else throw new Error('invalid tickMethod ' + this.tickMethod)
   }
@@ -182,7 +182,7 @@ WAAClock.prototype.stop = function() {
 
 // This function is ran periodically, and at each tick it executes
 // events for which `currentTime` is included in their tolerance interval.
-WAAClock.prototype._tick = function() {
+WAAClock.prototype.tick = function() {
   var event = this._events.shift()
 
   while(event && event._earliestTime <= this.context.currentTime) {
@@ -239,5 +239,6 @@ WAAClock.prototype._absTime = function(relTime) {
 WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
+
 },{}]},{},[1])
 ;

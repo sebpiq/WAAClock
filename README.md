@@ -210,6 +210,10 @@ Released under MIT license
 Change log
 -----------
 
+### 0.5.5
+
+- added `{ tickMethod: 'manual' }` to allow opting out of ScriptProcessorNode
+
 ### 0.5.3
 
 - bug fixes.
